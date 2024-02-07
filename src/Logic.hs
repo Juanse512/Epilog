@@ -60,6 +60,11 @@ functionSearch search envlist = let (match, generic) = functionMatcher search en
                                                             xs -> Just (head xs)
                                                     xs -> Just (head xs)
 
+insertKey :: Key -> Exp -> Env -> Env
+insertKey k exp [] = [(k, exp)]
+insertKey k exp ((k2, exp2):xs) = if k == k2 then (k, exp):xs else (k2, exp2):(insertKey k exp xs)
+
+
 
 
 instance Ord Name where
@@ -74,16 +79,16 @@ instance Ord Name where
     compare (Function n) (Function n2) = compare n n2
     compare (ReturnValue n) (ReturnValue n2) = compare n n2
     
-data Key = K (Name,[VarT]) deriving (Show, Eq)
-instance Ord Key where
-    compare (K (n1, v1)) (K (n2, v2)) = if v1 /= v2 then compare n1 n2 else LT
+type Key = (Name, [VarT])
+-- instance Ord Key where
+--     compare (K (n1, v1)) (K (n2, v2)) = if v1 /= v2 then compare n1 n2 else LT
 -- instance Eq Key where
 --     (K (n1, vars1)) == (K (n2, vars2)) = (n1 == n2) && (vars1 == vars2)
-type Env = M.Map Key Exp
+type Env = [(Key, Exp)]
 
 -- Entorno nulo
 initEnv :: Env
-initEnv = M.empty
+initEnv = []
 
 -- Mónada estado, con manejo de errores
 newtype StateError a =
@@ -112,18 +117,18 @@ instance MonadError StateError where
 -- 2) Si no, buscar matches con values
 -- 3) Si no, buscar matches con generic y luego reemplazar las variables
 -- 4) Si hay mas de un match, ver que hace prolog y copiarlo
-keyToList :: [(Key, Exp)] -> [((Name, [VarT]), Exp)]
-keyToList [] = []
-keyToList ((K p, exp):xs) = (p, exp):(keyToList xs)
+-- keyToList :: [(Key, Exp)] -> [((Name, [VarT]), Exp)]
+-- keyToList [] = []
+-- keyToList ((K p, exp):xs) = (p, exp):(keyToList xs)
 
 
 instance MonadState StateError where
   --falta logica para matchear variables genericas y valores
   -- lookfor v vars = StateError $ \env -> case functionSearch (v, vars) (keyToList (M.toList env)) of
-  lookfor v vars = StateError $ \env -> case M.lookup (K (v, vars)) env of
+  lookfor v vars = StateError $ \env -> case functionSearch (v, vars) env of
         Nothing -> Left UndefVar
         Just fun -> Right (fun :!: env)
-  update v vars x = StateError $ \env -> Right (() :!: M.insert (K (v,vars)) x env)
+  update v vars x = StateError $ \env -> Right (() :!: insertKey (v,vars) x env)
 -- HAY ERROR CON LAS VARIABLES, NO DIFERENCIA ENTRE MISMA FUNCION DISTINTAS VARIABLES
 -- ESTO SE ARREGLA HACIENDO LA FUNCION DE BUSQUEDA BIEN CREO
 -- eval :: [Exp] -> Either Error Exp
