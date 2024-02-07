@@ -1,0 +1,4 @@
+- Arreglar lookup, capaz cambiar de env a un array de pares?
+- Implementar querys con valores genericos test(X, 'value')
+- Implementar listas?
+- Limpiar gramatica
