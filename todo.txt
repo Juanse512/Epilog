@@ -1,5 +1,8 @@
 - Arreglar lookup, capaz cambiar de env a un array de pares? --
 - Manejar busqueda con variables genericas
+- Revisar que el seq funcione
 - Implementar querys con valores genericos test(X, 'value')
 - Implementar listas?
+- Implementar enteros?
+- Emprolijar ui
 - Limpiar gramatica

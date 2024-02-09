@@ -29,17 +29,18 @@ genericVarMatcher :: [VarT] -> [VarT] -> Bool
 genericVarMatcher [] [] = True
 genericVarMatcher [] xs = False
 genericVarMatcher xs [] = False
-genericVarMatcher ((VarN (Value s)):xs) ((VarN (Generic ss)):xss) = varMatcher xs xss
-genericVarMatcher ((VarN (Generic s)):xs) ((VarN (Generic ss)):xss) = varMatcher xs xss
-genericVarMatcher ((VarN (Value s)):xs) ((VarN (Value ss)):xxs) = if s == ss then varMatcher xs xxs else False
-
-functionMatcher :: (Name, [VarT]) -> [((Name, [VarT]), Exp)] -> ([Exp], [Exp])
+genericVarMatcher ((VarN (Value s)):xs) ((VarN (Generic ss)):xss) = genericVarMatcher xs xss
+genericVarMatcher ((VarN (Generic s)):xs) ((VarN (Generic ss)):xss) = genericVarMatcher xs xss
+genericVarMatcher ((VarN (Value s)):xs) ((VarN (Value ss)):xxs) = if s == ss then genericVarMatcher xs xxs else False
+-- Falta caso Generic - Value, esto seria parte de las queries con valores genericos
+-- Iria en otra funcion creo
+functionMatcher :: (Name, [VarT]) -> [((Name, [VarT]), Exp)] -> ([Exp], [(Exp, [VarT])])
 functionMatcher (name, vars) [] = ([], [])
 functionMatcher (name, vars) (((fname, fvars), exp):xs) | name == fname =  let varMatch = varMatcher vars fvars
                                                                                genericMatch = genericVarMatcher vars fvars
                                                                                (left, right) = functionMatcher (name, vars) xs
                                                                             in if varMatch then (exp:left, right)
-                                                                                else if genericMatch then (left, exp:right)
+                                                                                else if genericMatch then (left, (exp, fvars):right)
                                                                                     else (left, right)
                                                         | otherwise = functionMatcher (name, vars) xs
 
@@ -48,17 +49,74 @@ searchResult [] = Nothing
 searchResult ((RTrue):xs) = Just RTrue
 searchResult ((RFalse):xs) = Just RFalse
 searchResult (x:xs) = searchResult xs
+-- ESTO ESTA MAL, hay que buscar las variables genericas que coincidan entre los dos arrayus
+-- y reemplazarlas por el valor, no siempre estan en la misma posicion
+-- Capaz conviene hacer un par (generico, valor) y despues buscar esa variable en la funcion
+matchGenericVars :: [VarT] -> [VarT] -> [(VarT, VarT)]
+matchGenericVars [] xss = []
+matchGenericVars xs [] = []
+matchGenericVars ((VarN (Value s)):xs) ((VarN (Value y)):xss) = matchGenericVars xs xss
+matchGenericVars ((VarN (Value s)):xs) ((VarN (Generic y)):xss) = ((VarN (Value s), VarN (Generic y))):matchGenericVars xs xss
+
+compareVars :: VarT -> [(VarT, VarT)] -> VarT
+compareVars var [] = var
+compareVars var ((value, generic):xs) = if var == generic then value else compareVars var xs
+
+replaceGenericVars :: [VarT] -> [(VarT, VarT)] -> [VarT]
+replaceGenericVars [] xs = []
+replaceGenericVars ((VarN (Generic s)):xs) xss = (compareVars (VarN (Generic s)) xss):replaceGenericVars xs xss
+replaceGenericVars (x:xs) xss = x:replaceGenericVars xs xss
+-- Opcion 1: Crear un contador que marque cuantas variables tiene una funcion, puede
+-- crear problemas si no todas las variables son genericas
+-- Opcion 2: Devolver un par (Exp,VarT) con las variables no utilizadas
+-- Con la correccion de arriba deberia andar, solo tengo que enviar  las variables recursivamente
+-- y reemplazar las genericas y los valores por nombre
+replaceFunctionVars :: [(VarT, VarT)] -> Exp -> Exp
+replaceFunctionVars vars (Fun name fvars) = Fun name (replaceGenericVars fvars vars)
+replaceFunctionVars vars (Seq a b) = Seq (replaceFunctionVars vars a) (replaceFunctionVars vars b)
+replaceFunctionVars vars (Eq a b) = Eq (replaceFunctionVars vars a) (replaceFunctionVars vars b)
+replaceFunctionVars vars (NEq a b) = NEq (replaceFunctionVars vars a) (replaceFunctionVars vars b)
+replaceFunctionVars vars (And a b) = And (replaceFunctionVars vars a) (replaceFunctionVars vars b)
+replaceFunctionVars vars (Or a b) = Or (replaceFunctionVars vars a) (replaceFunctionVars vars b)
+replaceFunctionVars vars exp = exp
+
+getVars :: Key -> [VarT]
+getVars (name, vars) = vars
+
+getName :: Key -> Name
+getName (name, vars) = name
+
+isFun :: Exp -> Bool
+isFun (Fun _ _) = True
+isFun _ = False
+
+splitFun :: Exp -> Key
+splitFun (Fun name vars) = (name, vars)
 
 
-functionSearch :: (Name, [VarT]) -> [((Name, [VarT]), Exp)] -> Maybe Exp
-functionSearch search envlist = let (match, generic) = functionMatcher search envlist
-                                in case (searchResult (match ++ generic)) of
-                                        Just x -> Just x
-                                        Nothing -> case match of 
-                                                    [] -> case generic of 
-                                                            [] -> Nothing
-                                                            xs -> Just (head xs)
-                                                    xs -> Just (head xs)
+functionSearch :: Key -> [(Key, Exp)] -> Bool -> Maybe Exp
+functionSearch search envlist depth = let (match, generic) = functionMatcher search envlist
+                                      in case (searchResult (match ++ (map Prelude.fst generic))) of
+                                              Just x -> Just x
+                                              Nothing -> case match of 
+                                                          [] -> case generic of 
+                                                                  [] -> Nothing
+                                                                  xs -> let (exp, vars) = (head xs)
+                                                                            varsPair = matchGenericVars (getVars search) vars
+                                                                            searchResult = (replaceFunctionVars varsPair exp)
+                                                                        in if not depth then Just searchResult
+                                                                           else if not (isFun searchResult) 
+                                                                                    then Just searchResult
+                                                                                    else let resKey = splitFun searchResult
+                                                                                             dupSearch = functionSearch resKey envlist False
+                                                                                          in case dupSearch of
+                                                                                                -- Just x -> Just x
+                                                                                                Just x -> if x == (Fun (getName search) (getVars search))
+                                                                                                          then Nothing
+                                                                                                          else Just searchResult
+                                                                                                Nothing -> Just searchResult
+                                                                                  
+                                                          xs -> Just (head xs)
 
 insertKey :: Key -> Exp -> Env -> Env
 insertKey k exp [] = [(k, exp)]
@@ -125,7 +183,7 @@ instance MonadError StateError where
 instance MonadState StateError where
   --falta logica para matchear variables genericas y valores
   -- lookfor v vars = StateError $ \env -> case functionSearch (v, vars) (keyToList (M.toList env)) of
-  lookfor v vars = StateError $ \env -> case functionSearch (v, vars) env of
+  lookfor v vars = StateError $ \env -> case functionSearch (v, vars) env True of
         Nothing -> Left UndefVar
         Just fun -> Right (fun :!: env)
   update v vars x = StateError $ \env -> Right (() :!: insertKey (v,vars) x env)
