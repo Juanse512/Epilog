@@ -6,12 +6,16 @@ instance Functor Stmt where
     fmap f (Def s i) = Def s (f i)
     fmap f (Eval i)  = Eval (f i)
 
+data EqToken = Plus | Minus | VarNum String | Num Int deriving (Show, Eq)
 
 -- Tipos de los nombres
 data Name = Generic String
           | Value String
           | Function String
           | ReturnValue Bool
+          | Joker String
+          | Integer Int
+          | Equation [EqToken]
     deriving (Show, Eq)
 
 data VarT = VarN Name deriving (Show, Eq)
@@ -24,6 +28,9 @@ data Exp = Fun Name [VarT]
           | NEq Exp Exp
           | And Exp Exp
           | Or Exp Exp
+          | Add Exp Exp
+          | Sub Exp Exp
+          | ReturnVars [[VarT]]
           | RTrue
           | RFalse
           | Skip
@@ -36,7 +43,7 @@ data Value = Val Bool
 type NameEnv = [(Exp, [Name], Exp)]
 
 
-data Error = UndefVar | InvalidOp deriving (Eq, Show)
+data Error = UndefVar | InvalidOp | WrongDef deriving (Eq, Show)
 
 
 generateVar :: String -> VarT

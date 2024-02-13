@@ -4,6 +4,7 @@ import Common
 import Data.Maybe
 import Data.Char
 import Data.List
+import Helpers
 }     
 %monad { P } { thenP } { returnP }
 %name parse
@@ -25,9 +26,12 @@ import Data.List
     'true'  {TTrue}
     'false' {TFalse}
     '.'     {TDot}
+    '{'     {TOBrace}
+    '}'     {TCBrace}
+    '+'     {TAdd}
+    '-'     {TMinus}
     VAR     {TVar $$}
     FUN     {TFun $$}
-        
 -- Asignar ordenes
 %nonassoc '.' 
 %right ':='
@@ -39,6 +43,7 @@ Exps  : Exxp                                      {[$1]}
 
 Exxp  :: {Exp}
 Exxp  : FUN '(' vars ')' ':=' Exp '.'             {Assgn (Function $1) $3 $6}
+      | FUN '(' vars ')' ':=' eqs '.'             {Assgn (Function $1) $3 (Var $6)}
       | Exp '.'                                   {$1}
        
 
@@ -51,11 +56,17 @@ Exp     :: {Exp}
         |   Exp '!=' Exp                {NEq $1 $3}
         |   Exp '&' Exp                 {And $1 $3}
         |   Exp '|' Exp                 {Or $1 $3}
+        |   Exp '+' Exp                 {Add $1 $3}
+        |   Exp '-' Exp                 {Sub $1 $3}
         
 vars :: { [ VarT ] }
-vars    :   VAR                        {[generateVar $1]}
+vars    :   eqs                        {[$1]}
+        |   VAR                        {[generateVar $1]}
+        |   vars ',' eqs               {$3 : $1}
         |   vars ',' VAR               {(generateVar $3) : $1}
 
+eqs :: { VarT }
+eqs     : '{' VAR '}'                   {VarN (Equation (lexNum $2))}
 
 
 
@@ -102,15 +113,23 @@ data Token = TVar String
            | TFalse
            | TDot
            | TEOF
+           | TCBrace
+           | TOBrace
+           | TAdd
+           | TMinus
            deriving Show
 
 lexer :: String -> [Token]
 lexer [] = []
 lexer ('\n':s) = lexer s
 lexer ('.':cs) = TDot : (lexer cs)
+lexer ('+':cs) = TAdd : (lexer cs)
+lexer ('-':cs) = TMinus : (lexer cs)
 lexer (',':cs) = TComa : (lexer cs)
 lexer ('(':cs) = TOpen : (lexer cs)
 lexer (')':cs) = TClose : (lexer cs)
+lexer ('{':cs) = TOBrace : (lexer cs)
+lexer ('}':cs) = TCBrace : (lexer cs)
 lexer (':':('=':cs)) = TAssgn : (lexer cs)
 lexer ('=':('=':cs)) = TEq : (lexer cs)
 lexer ('!':('=':cs)) = TNeq : (lexer cs)
@@ -126,10 +145,9 @@ lexer (c:cs) | isSpace c = lexer cs
                                 if openParIdx /= Nothing && openParIdx < closeParIdx && ((openParIdx < enterIdx && enterIdx /= Nothing) || enterIdx == Nothing) then
                                         (TFun (takeWhile (/= '(') cs)) : lexer ((dropWhile (/= '(')) cs)
                                 else
-                                        case span (\x -> ((isAlpha x || isDigit x || x == '\'') && x /= '\n')) cs of
+                                        case span (\x -> ((isAlpha x || isDigit x || x == '\'' || isMath x) && x /= '\n')) cs of
                                                 ("true", rest) -> TTrue : (lexer rest)
                                                 ("false", rest) -> TFalse : (lexer rest)
-                                                -- (cs, rest) -> (TVar (takeWhile (/= ',') cs)) : (lexer rest)
                                                 (cs, rest) -> let var = getVar cs in (TVar var) : lexer (getRest rest)
                 getVar [] = []
                 getVar (')':cs) = []
@@ -143,5 +161,9 @@ lexer (c:cs) | isSpace c = lexer cs
                 getRest (',':cs) = ',':cs
                 getRest ('(':cs) = '(':cs
                 getRest (' ':cs) = ' ':cs
+                getRest ('}':cs) = '}':cs
                 getRest (c:cs) = (getRest cs)
+                isMath '+' = True
+                isMath '-' = True
+                isMath _ = False
 }
