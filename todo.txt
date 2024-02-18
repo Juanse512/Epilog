@@ -1,9 +1,21 @@
-- Implementar enteros -- se implementa como {x + 1} para diferenciar vars de numeros
- -- Parseo, si no tengo variables evaluo, si no reemplazo las variables y despues evaluo
-- Implementar listas?
-- ver que pasa y handlear cuando hago una query generica a una funcion con ecuacion
-- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (ver exeq.txt)
-- entre {} no se pueden poner espacios
-- Emprolijar ui
-- Limpiar gramatica
-- Revisar que el seq funcione -- Vale la pena mantener el seq si tengo and or etc?
+- Enteros: 
+ -- Si pongo una ecuacion adentro de una definicion se evalua y no se guarda (int.txt)
+ -- Ver que pasa y handlear cuando hago una query generica a una funcion con ecuacion
+ -- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (exeq.txt)
+- Listas:
+
+
+lexer:
+   --entre {} no se pueden poner espacios
+
+General:
+   -- Emprolijar ui
+   -- Limpiar gramatica (No se si es tan necesario ahora)
+   -- Documentar
+   -- Comentar
+
+
+
+
+
+- Revisar que el seq funcione -- Vale la pena mantener el seq si tengo and or etc? Creo que no

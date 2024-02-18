@@ -30,6 +30,9 @@ import Helpers
     '}'     {TCBrace}
     '+'     {TAdd}
     '-'     {TMinus}
+    ':'     {TDDot}
+    '['     {TLOpen}
+    ']'     {TLClose}
     VAR     {TVar $$}
     FUN     {TFun $$}
 -- Asignar ordenes
@@ -58,17 +61,28 @@ Exp     :: {Exp}
         |   Exp '|' Exp                 {Or $1 $3}
         |   Exp '+' Exp                 {Add $1 $3}
         |   Exp '-' Exp                 {Sub $1 $3}
+        |   '{' VAR '}'                 {Var (VarN (Equation (lexNum $2)))}
         
 vars :: { [ VarT ] }
 vars    :   eqs                        {[$1]}
+        |   lst                        {[$1]}
         |   VAR                        {[generateVar $1]}
         |   vars ',' eqs               {$3 : $1}
         |   vars ',' VAR               {(generateVar $3) : $1}
+        |   vars ',' VAR               {$1 ++ [(generateVar $3)]}
+        |   vars ',' lst               {$3 : $1}
+
+lst :: { VarT }
+lst     : '[' varlst ']'               {VarN (List $2)}
+        | '[' ']'                      {VarN (List [])}
+        | VAR ':' VAR                  {VarN (HeadTail (Generic $1) (Generic $3))}
 
 eqs :: { VarT }
 eqs     : '{' VAR '}'                   {VarN (Equation (lexNum $2))}
 
-
+varlst :: { [VarT] }
+        : VAR                          {[generateVar $1]}
+        | varlst ',' VAR               {$1 ++ [(generateVar $3)]}
 
 -- AssgnDef :: {Exp}
 --          : FUN '(' vars ')' ':=' Exp    {Assgn (Function $1) $3 $6}
@@ -117,6 +131,9 @@ data Token = TVar String
            | TOBrace
            | TAdd
            | TMinus
+           | TDDot
+           | TLOpen
+           | TLClose
            deriving Show
 
 lexer :: String -> [Token]
@@ -135,33 +152,53 @@ lexer ('=':('=':cs)) = TEq : (lexer cs)
 lexer ('!':('=':cs)) = TNeq : (lexer cs)
 lexer ('&':cs) = TAnd : (lexer cs)
 lexer ('|':cs) = TOr : (lexer cs)
+lexer (':':cs) = TDDot : (lexer cs)
+lexer ('[':cs) = TLOpen : (lexer cs)
+lexer (']':cs) = TLClose : (lexer cs)
 lexer (c:cs) | isSpace c = lexer cs
              | otherwise = lexVar (c:cs)
         where   lexVar :: String -> [Token]
                 lexVar cs = let openParIdx = (elemIndex '(' cs)
                                 closeParIdx = (elemIndex ')' cs)
                                 enterIdx = (elemIndex '\n' cs)
+                                bracketIdx = (elemIndex '}' cs)
+                                bracketOpenIdx = (elemIndex '{' cs)
                             in
-                                if openParIdx /= Nothing && openParIdx < closeParIdx && ((openParIdx < enterIdx && enterIdx /= Nothing) || enterIdx == Nothing) then
+                                if ((bracketIdx == Nothing) || (bracketIdx >= openParIdx)) && openParIdx /= Nothing && openParIdx < closeParIdx && ((openParIdx < enterIdx && enterIdx /= Nothing) || enterIdx == Nothing) then
                                         (TFun (takeWhile (/= '(') cs)) : lexer ((dropWhile (/= '(')) cs)
                                 else
+                                        -- El problema esta en este span, separa por espacios creo
                                         case span (\x -> ((isAlpha x || isDigit x || x == '\'' || isMath x) && x /= '\n')) cs of
                                                 ("true", rest) -> TTrue : (lexer rest)
                                                 ("false", rest) -> TFalse : (lexer rest)
-                                                (cs, rest) -> let var = getVar cs in (TVar var) : lexer (getRest rest)
+                                                (cs, rest) -> if bracketIdx /= Nothing && ((bracketIdx <= bracketOpenIdx) || (bracketOpenIdx == Nothing))
+                                                              then let var = getEq cs in (TVar var) : lexer (getRest rest)
+                                                              else let var = getVar cs in (TVar var) : lexer (getRest rest)
+                                                
                 getVar [] = []
                 getVar (')':cs) = []
                 getVar (',':cs) = []
                 getVar ('(':cs) = []
+                getVar (':':cs) = []
                 getVar (' ':cs) = []
                 getVar (c:cs) = c : (getVar cs)
                 
+                getEq [] = []
+                getEq (')':cs) = []
+                getEq (',':cs) = []
+                getEq ('(':cs) = []
+                getEq (':':cs) = []
+                getEq (' ':cs) = (getEq cs)
+                getEq (c:cs) = c : (getEq cs)
+
                 getRest [] = []
                 getRest (')':cs) = ')':cs
                 getRest (',':cs) = ',':cs
                 getRest ('(':cs) = '(':cs
                 getRest (' ':cs) = ' ':cs
                 getRest ('}':cs) = '}':cs
+                getRest (']':cs) = ']':cs
+                getRest (':':cs) = ':':cs
                 getRest (c:cs) = (getRest cs)
                 isMath '+' = True
                 isMath '-' = True

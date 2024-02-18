@@ -36,10 +36,13 @@ genericVarMatcher ((VarN (Generic s)):xs) ((VarN (Generic ss)):xss) = genericVar
 genericVarMatcher ((VarN (Equation s)):xs) ((VarN (Generic ss)):xss) = genericVarMatcher xs xss
 genericVarMatcher ((VarN (Equation s)):xs) ((VarN (Equation ss)):xss) = if s == ss then genericVarMatcher xs xss else False
 genericVarMatcher ((VarN (Generic s)):xs) ((VarN (Equation ss)):xss) = genericVarMatcher xs xss 
-genericVarMatcher ((VarN (Value s)):xs) ((VarN (Value ss)):xxs) = if s == ss then genericVarMatcher xs xxs else False
-genericVarMatcher ((VarN (Joker s)):xs) (x:xxs) = False
--- Falta caso Generic - Value, esto seria parte de las queries con valores genericos
--- Iria en otra funcion creo
+genericVarMatcher ((VarN (Value s)):xs) ((VarN (Value ss)):xss) = if s == ss then genericVarMatcher xs xss else False
+genericVarMatcher ((VarN (List s)):xs) ((VarN (List ss)):xss) = if s == ss then genericVarMatcher xs xss else False
+-- ^ esto no se puede hacer en haskell creo 
+genericVarMatcher ((VarN (List [])):xs) ((VarN (HeadTail _ _)):xss) = False
+genericVarMatcher ((VarN (List s)):xs) ((VarN (HeadTail _ _)):xss) = genericVarMatcher xs xss
+genericVarMatcher ((VarN (Joker s)):xs) (x:xss) = False
+
 functionMatcher :: (Name, [VarT]) -> [((Name, [VarT]), Exp)] -> ([(Exp, [VarT])], [(Exp, [VarT])])
 functionMatcher (name, vars) [] = ([], [])
 functionMatcher (name, vars) (((fname, fvars), exp):xs) | name == fname =  let varMatch = varMatcher vars fvars
@@ -55,17 +58,16 @@ searchResult [] = Nothing
 searchResult ((RTrue):xs) = Just RTrue
 searchResult ((RFalse):xs) = Just RFalse
 searchResult (x:xs) = searchResult xs
--- ESTO ESTA MAL, hay que buscar las variables genericas que coincidan entre los dos arrayus
--- y reemplazarlas por el valor, no siempre estan en la misma posicion
--- Capaz conviene hacer un par (generico, valor) y despues buscar esa variable en la funcion
+
 pairGenericVars :: [VarT] -> [VarT] -> [(VarT, VarT)]
 pairGenericVars [] xss = []
 pairGenericVars xs [] = []
 pairGenericVars ((VarN (Value s)):xs) ((VarN (Value y)):xss) = pairGenericVars xs xss
 pairGenericVars ((VarN (Value s)):xs) ((VarN (Generic y)):xss) = ((VarN (Value s), VarN (Generic y))):pairGenericVars xs xss
-pairGenericVars ((VarN (Integer s)):xs) ((VarN (Generic y)):xss) = ((VarN (Integer s), VarN (Generic y))):pairGenericVars xs xss
 pairGenericVars ((VarN (Equation s)):xs) ((VarN (Generic y)):xss) = ((VarN (Equation s), VarN (Generic y))):pairGenericVars xs xss
+pairGenericVars ((VarN (List s)):xss) ((VarN (HeadTail x xs)):xsss) = (head s, VarN x):((VarN (List (tail s))), VarN xs):pairGenericVars xss xsss
 pairGenericVars (x:xs) (y:ys) = pairGenericVars xs ys
+
 compareVars :: VarT -> [(VarT, VarT)] -> VarT
 compareVars var [] = var
 compareVars var ((value, generic):xs) = if var == generic then value else compareVars var xs
@@ -111,6 +113,12 @@ replaceFunctionVars vars (And a b) = do fa <- (replaceFunctionVars vars a)
 replaceFunctionVars vars (Or a b) = do fa <- (replaceFunctionVars vars a)
                                        fb <- (replaceFunctionVars vars b)
                                        return (Or fa fb)  
+replaceFunctionVars vars (Add a b) = do fa <- (replaceFunctionVars vars a)
+                                        fb <- (replaceFunctionVars vars b)
+                                        return (Add fa fb)  
+replaceFunctionVars vars (Sub a b) = do fa <- (replaceFunctionVars vars a)
+                                        fb <- (replaceFunctionVars vars b)
+                                        return (Sub fa fb)  
 replaceFunctionVars vars exp = return exp
 -- replaceFunctionVars vars (Eq a b) = Eq (replaceFunctionVars vars a) (replaceFunctionVars vars b)
 -- replaceFunctionVars vars (NEq a b) = NEq (replaceFunctionVars vars a) (replaceFunctionVars vars b)
@@ -247,7 +255,6 @@ instance MonadState StateError where
   lookfor v vars = StateError $ \env -> case functionSearch (v, vars) env True of
         Nothing -> Left UndefVar
         Just fun -> Right (fun :!: env)
-                    
   update v vars x = StateError $ \env -> Right (() :!: insertKey (v,vars) x env) 
                                           
 eval :: [Exp] -> Either Error Exp
@@ -321,13 +328,13 @@ stepComm (Add c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
     res <- evalNums c1' c2' (+)
-    return (Var (VarN (Integer res)))
+    return (Var (VarN (Equation [Num res])))
 
 stepComm (Sub c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
     res <- evalNums c1' c2' (-)
-    return (Var (VarN (Integer res)))
+    return (Var (VarN (Equation [Num res])))
 
 
 evalFun name vars = lookfor name vars
@@ -348,7 +355,9 @@ evalNums (Var (VarN (Equation a))) (Var (VarN (Equation b))) op = let e1 = evalN
                                                                        Just e1' -> case e2 of
                                                                                     Nothing -> throw InvalidOp
                                                                                     Just e2' -> return (op e1' e2')
-evalNums _ _ _ = throw InvalidOp
+evalNums a b op = throw InvalidOp
+
+  
 -- stepComm (IfThenElse b c1 c2) = do
 --   b' <- evalExp b
 --   if b' then return c1 else return c2

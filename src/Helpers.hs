@@ -18,16 +18,6 @@ lexNum (num:s) | isDigit num = let valStr = takeWhile (isDigit) (num:s)
                 | otherwise = let varStr = takeWhile (isAlpha) (num:s)
                               in (VarNum varStr):lexNum (dropWhile (isAlpha) (num:s))
 
-getInteger :: String -> [(VarT, VarT)] -> EqToken
-getInteger str [] = VarNum str
-getInteger str ((VarN (Integer int), VarN (Generic s)):xs) | str == s = Num int
-                                             | otherwise = getInteger str xs
-getInteger str (m:map) = getInteger str map 
-
-replaceVars :: [EqToken] -> [(VarT, VarT)] -> [EqToken]
-replaceVars [] arrMap = []
-replaceVars ((VarNum str):xs) arrMap = (getInteger str arrMap):replaceVars xs arrMap
-replaceVars (x:xs) arrMap = x:replaceVars xs arrMap
 
 evalNum :: [EqToken] -> Int -> Maybe Int
 evalNum [] a = Just a

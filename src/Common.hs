@@ -14,8 +14,9 @@ data Name = Generic String
           | Function String
           | ReturnValue Bool
           | Joker String
-          | Integer Int
           | Equation [EqToken]
+          | List [VarT]
+          | HeadTail Name Name
     deriving (Show, Eq)
 
 data VarT = VarN Name deriving (Show, Eq)
