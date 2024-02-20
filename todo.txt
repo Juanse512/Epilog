@@ -1,13 +1,19 @@
 - Enteros: 
  -- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (exeq.txt)
     Capaz conviene limitar el Int,
- -- Agregar operadores (* /) y sus prioridades, cambiar Num de int a float
+ -- Cambiar a notacion Add NumToken NumToken, para handlear precedencia
+      --- data EqToken =   Plus EqToken EqToken 
+                           | Minus EqToken EqToken 
+                           | NumTimes EqToken EqToken 
+                           | NumDiv EqToken EqToken 
+                           | VarNum String 
+                           | Num Int deriving (Show, Eq)
+      --- Esto implica cambiar el eval y el handleo de variables, aparte que ya no es mas una lista 
+ -- Agregar precedencia parser
+ -- Cambiar de int a float el Num y parsearlo
 
 Debug:
    -- Mixear tipos de variable
-
-lexer:
-   --entre {} no se pueden poner espacios
 
 Cleanup:
    -- Modularizar Logic
@@ -28,3 +34,4 @@ Review:
 General:
    -- Limpiar gramatica (No se si es tan necesario ahora)
 - Listas:
+- Lexer:

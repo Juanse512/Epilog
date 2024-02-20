@@ -12,6 +12,8 @@ lexNum [] = []
 lexNum (' ':s) = lexNum s
 lexNum ('+':s) = Plus:lexNum s
 lexNum ('-':s) = Minus:lexNum s
+lexNum ('*':s) = NumTimes:lexNum s
+lexNum ('/':s) = NumDiv:lexNum s
 lexNum (num:s) | isDigit num = let valStr = takeWhile (isDigit) (num:s)
                                    valInt = stringToInt valStr ((length valStr) - 1)
                                in (Num valInt):lexNum s
@@ -24,6 +26,8 @@ evalNum [] a = Just a
 evalNum (Num i:xs) 0 = evalNum xs i
 evalNum (Plus:Num i:xs) a = evalNum xs (a+i)
 evalNum (Minus:Num i:xs) a = evalNum xs (a-i)
+evalNum (NumTimes:Num i:xs) a = evalNum xs (a*i)
+evalNum (NumDiv:Num i:xs) a = evalNum xs (a `div` i)
 evalNum xs a = Nothing
 
 parseAndEval :: String -> Maybe Int
