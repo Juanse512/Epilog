@@ -17,9 +17,9 @@ parensIf False = id
 
 printVars:: [VarT] -> String
 printVars [] = []
-printVars [(VarN (Generic n))] = n
-printVars [(VarN (Value n))] = "'" ++ n ++ "'"
-printVars ((VarN var):cs) = case var of 
+printVars [Generic n] = n
+printVars [Value n] = "'" ++ n ++ "'"
+printVars (var:cs) = case var of 
                           (Generic n) -> n ++ "," ++ (printVars cs)
                           (Value n) -> "'" ++ n ++ "'" ++ "," ++ (printVars cs)
 
@@ -30,7 +30,6 @@ printVars ((VarN var):cs) = case var of
 pp :: Exp -> Doc
 pp (Fun (Function name) var) = text (name ++ "(" ++ (printVars var) ++ ")")
 pp (Assgn (Function name) var exp) = text (name ++ "(" ++ printVars var ++ ")" ++ ":=" ) <+> pp exp
-pp (Seq exp exp2) = pp exp <+> text "," <+> pp exp2
 pp (Eq exp exp2) =  pp exp <+> text "==" <+> pp exp2
 pp (NEq exp exp2) =  pp exp <+> text "!=" <+> pp exp2
 pp (Or exp exp2) =  pp exp <+> text "|" <+> pp exp2

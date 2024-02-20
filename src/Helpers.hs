@@ -18,6 +18,7 @@ lexNum (num:s) | isDigit num = let valStr = takeWhile (isDigit) (num:s)
 
 evalNum :: EqToken -> Maybe Int
 evalNum (Num i) = return i
+evalNum (VarNum i) = Nothing
 evalNum (Plus a b) = do a' <- evalNum a
                         b' <- evalNum b
                         return (a' + b')

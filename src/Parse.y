@@ -58,7 +58,6 @@ Exp     :: {Exp}
         :   'true'                      {RTrue}
         |   'false'                     {RFalse}
         |   FUN '(' vars ')'            {Fun (Function $1) $3}
-        |   Exp ',' Exp                 {Seq $1 $3}
         |   Exp '==' Exp                {Eq $1 $3}
         |   Exp '!=' Exp                {NEq $1 $3}
         |   Exp '&' Exp                 {And $1 $3}
@@ -67,7 +66,7 @@ Exp     :: {Exp}
         |   Exp '-' Exp                 {Sub $1 $3}
         |   Exp '*' Exp                 {Times $1 $3}
         |   Exp '/' Exp                 {Div $1 $3}
-        |   '{' nums '}'                {Var (VarN (Equation $2))}
+        |   '{' nums '}'                {Var (Equation $2)}
         
 vars :: { [ VarT ] }
 vars    :   eqs                        {[$1]}
@@ -79,12 +78,12 @@ vars    :   eqs                        {[$1]}
         |   vars ',' lst               {$3 : $1}
 
 lst :: { VarT }
-lst     : '[' varlst ']'               {VarN (List $2)}
-        | '[' ']'                      {VarN (List [])}
-        | VAR ':' VAR                  {VarN (HeadTail (Generic $1) (Generic $3))}
+lst     : '[' varlst ']'               {List $2}
+        | '[' ']'                      {List []}
+        | VAR ':' VAR                  {HeadTail (Generic $1) (Generic $3)}
 
 eqs :: { VarT }
-eqs     : '{' nums '}'                   {VarN (Equation $2)}
+eqs     : '{' nums '}'                   {Equation $2}
 
 nums :: { EqToken }
 nums    : VAR                           {lexNum $1}

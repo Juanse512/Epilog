@@ -14,22 +14,19 @@ data EqToken = Plus EqToken EqToken
              | Num Int deriving (Show, Eq)
 
 -- Tipos de los nombres
-data Name = Generic String
+data VarT = Generic String
           | Value String
           | Function String
           | ReturnValue Bool
           | Joker String
           | Equation EqToken
           | List [VarT]
-          | HeadTail Name Name
+          | HeadTail VarT VarT
     deriving (Show, Eq)
 
-data VarT = VarN Name deriving (Show, Eq)
-
-data Exp = Fun Name [VarT]
-          | Assgn Name [VarT] Exp
+data Exp = Fun VarT [VarT]
+          | Assgn VarT [VarT] Exp
           | Var VarT
-          | Seq Exp Exp
           | Eq Exp Exp
           | NEq Exp Exp
           | And Exp Exp
@@ -45,21 +42,20 @@ data Exp = Fun Name [VarT]
     deriving (Show, Eq)
 
 data Value = Val Bool
-           | VarRes Name
+           | VarRes VarT
 
 -- Entornos
-type NameEnv = [(Exp, [Name], Exp)]
 
 
 data Error = UndefVar | InvalidOp | WrongDef deriving (Eq, Show)
 
 
 generateVar :: String -> VarT
-generateVar ('\'':cs) = VarN (Value (takeWhile (/= '\'') cs))
+generateVar ('\'':cs) = Value (takeWhile (/= '\'') cs)
 generateVar cs = case cs of 
-                    "true" -> VarN (ReturnValue True)
-                    "false" -> VarN (ReturnValue False)
-                    _ -> VarN (Generic cs)
+                    "true" -> ReturnValue True
+                    "false" -> ReturnValue False
+                    _ -> Generic cs
 -- gato(tom) :- true.
 
 -- padrede('Juan', 'María').

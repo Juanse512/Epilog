@@ -20,25 +20,26 @@ varMatcher :: [VarT] -> [VarT] -> Bool
 varMatcher [] [] = True
 varMatcher [] xs = False
 varMatcher xs [] = False
-varMatcher ((VarN (Value s)):xs) ((VarN (Value ss)):xxs) = if s == ss then varMatcher xs xxs else False
-varMatcher ((VarN (Joker _)):xs) ((VarN (Value ss)):xxs) = varMatcher xs xxs
+varMatcher ((Value s):xs) ((Value ss):xxs) = if s == ss then varMatcher xs xxs else False
+varMatcher ((Joker _):xs) ((Value ss):xxs) = varMatcher xs xxs
 varMatcher _ _ = False
 genericVarMatcher :: [VarT] -> [VarT] -> Bool
 genericVarMatcher [] [] = True
 genericVarMatcher [] xs = False
 genericVarMatcher xs [] = False
-genericVarMatcher ((VarN (Value s)):xs) ((VarN (Generic ss)):xss) = genericVarMatcher xs xss
-genericVarMatcher ((VarN (Generic s)):xs) ((VarN (Generic ss)):xss) = genericVarMatcher xs xss
-genericVarMatcher ((VarN (Equation s)):xs) ((VarN (Generic ss)):xss) = genericVarMatcher xs xss
-genericVarMatcher ((VarN (Equation s)):xs) ((VarN (Equation ss)):xss) = if s == ss then genericVarMatcher xs xss else False
-genericVarMatcher ((VarN (Generic s)):xs) ((VarN (Equation ss)):xss) = genericVarMatcher xs xss 
-genericVarMatcher ((VarN (Value s)):xs) ((VarN (Value ss)):xss) = if s == ss then genericVarMatcher xs xss else False
-genericVarMatcher ((VarN (List s)):xs) ((VarN (List ss)):xss) = if s == ss then genericVarMatcher xs xss else False
-genericVarMatcher ((VarN (List [])):xs) ((VarN (HeadTail _ _)):xss) = False
-genericVarMatcher ((VarN (List s)):xs) ((VarN (HeadTail _ _)):xss) = genericVarMatcher xs xss
-genericVarMatcher ((VarN (Joker s)):xs) (x:xss) = False
+genericVarMatcher ((Value s):xs) ((Generic ss):xss) = genericVarMatcher xs xss
+genericVarMatcher ((Generic s):xs) ((Generic ss):xss) = genericVarMatcher xs xss
+genericVarMatcher ((Equation s):xs) ((Generic ss):xss) = genericVarMatcher xs xss
+genericVarMatcher ((Equation s):xs) ((Equation ss):xss) = if s == ss then genericVarMatcher xs xss else False
+genericVarMatcher ((Generic s):xs) ((Equation ss):xss) = genericVarMatcher xs xss 
+genericVarMatcher ((Value s):xs) ((Value ss):xss) = if s == ss then genericVarMatcher xs xss else False
+genericVarMatcher ((List s):xs) ((List ss):xss) = if s == ss then genericVarMatcher xs xss else False
+genericVarMatcher ((List []):xs) ((HeadTail _ _):xss) = False
+genericVarMatcher ((List s):xs) ((HeadTail _ _):xss) = genericVarMatcher xs xss
+genericVarMatcher ((Joker s):xs) (x:xss) = False
+genericVarMatcher ((Value s):xs) ((Equation ss):xss) = False
 
-functionMatcher :: (Name, [VarT]) -> [((Name, [VarT]), Exp)] -> ([(Exp, [VarT])], [(Exp, [VarT])])
+functionMatcher :: (VarT, [VarT]) -> [((VarT, [VarT]), Exp)] -> ([(Exp, [VarT])], [(Exp, [VarT])])
 functionMatcher (name, vars) [] = ([], [])
 functionMatcher (name, vars) (((fname, fvars), exp):xs) | name == fname =  let varMatch = varMatcher vars fvars
                                                                                genericMatch = genericVarMatcher vars fvars
@@ -57,10 +58,10 @@ searchResult (x:xs) = searchResult xs
 pairGenericVars :: [VarT] -> [VarT] -> [(VarT, VarT)]
 pairGenericVars [] xss = []
 pairGenericVars xs [] = []
-pairGenericVars ((VarN (Value s)):xs) ((VarN (Value y)):xss) = pairGenericVars xs xss
-pairGenericVars ((VarN (Value s)):xs) ((VarN (Generic y)):xss) = ((VarN (Value s), VarN (Generic y))):pairGenericVars xs xss
-pairGenericVars ((VarN (Equation s)):xs) ((VarN (Generic y)):xss) = ((VarN (Equation s), VarN (Generic y))):pairGenericVars xs xss
-pairGenericVars ((VarN (List s)):xss) ((VarN (HeadTail x xs)):xsss) = (head s, VarN x):((VarN (List (tail s))), VarN xs):pairGenericVars xss xsss
+pairGenericVars ((Value s):xs) ((Value y):xss) = pairGenericVars xs xss
+pairGenericVars ((Value s):xs) ((Generic y):xss) = ((Value s),(Generic y)):pairGenericVars xs xss
+pairGenericVars ((Equation s):xs) ((Generic y):xss) = ((Equation s),(Generic y)):pairGenericVars xs xss
+pairGenericVars ((List s):xss) ((HeadTail x xs):xsss) = (head s,x):((List (tail s)),xs):pairGenericVars xss xsss
 pairGenericVars (x:xs) (y:ys) = pairGenericVars xs ys
 
 compareVars :: VarT -> [(VarT, VarT)] -> VarT
@@ -68,7 +69,7 @@ compareVars var [] = var
 compareVars var ((value, generic):xs) = if var == generic then value else compareVars var xs
 compareEquationVars :: EqToken -> [(VarT, VarT)] -> EqToken
 compareEquationVars a [] = a
-compareEquationVars (VarNum s) (((VarN (Equation e)), (VarN (Generic g))):xs) | s == g = case evalNum e of 
+compareEquationVars (VarNum s) ((Equation e, Generic g):xs) | s == g = case evalNum e of 
                                                                                             Just ev -> (Num ev)
                                                                                             Nothing -> (VarNum s)
                                                                               | otherwise = compareEquationVars (VarNum s) xs
@@ -91,21 +92,18 @@ searchForVarsInEq a map = a
 
 replaceGenericVars :: [VarT] -> [(VarT, VarT)] -> Maybe [VarT]
 replaceGenericVars [] xs = return []
-replaceGenericVars ((VarN (Generic s)):xs) xss = do rest <- replaceGenericVars xs xss
-                                                    return ((compareVars (VarN (Generic s)) xss):rest)
-replaceGenericVars ((VarN (Equation eq)):xs) xss = do rest <- replaceGenericVars xs xss 
-                                                      let eqT = searchForVarsInEq eq xss
-                                                      evalEq <- evalNum eqT
-                                                      return ((VarN (Equation (Num evalEq))):rest)
+replaceGenericVars ((Generic s):xs) xss = do rest <- replaceGenericVars xs xss
+                                             return ((compareVars (Generic s) xss):rest)
+replaceGenericVars ((Equation eq):xs) xss = do  rest <- replaceGenericVars xs xss 
+                                                let eqT = searchForVarsInEq eq xss
+                                                evalEq <- evalNum eqT
+                                                return ((Equation (Num evalEq)):rest)
 replaceGenericVars (x:xs) xss = do rest <- replaceGenericVars xs xss
                                    return (x:rest)
 
 replaceFunctionVars :: [(VarT, VarT)] -> Exp -> Maybe Exp
 replaceFunctionVars vars (Fun name fvars) = do fvars <- (replaceGenericVars fvars vars)
                                                return (Fun name fvars)
-replaceFunctionVars vars (Seq a b) = do fa <- (replaceFunctionVars vars a)
-                                        fb <- (replaceFunctionVars vars b)
-                                        return (Seq fa fb)  
 replaceFunctionVars vars (NEq a b) = do fa <- (replaceFunctionVars vars a)
                                         fb <- (replaceFunctionVars vars b)
                                         return (NEq fa fb)  
@@ -133,7 +131,7 @@ replaceFunctionVars vars exp = return exp
 getVars :: Key -> [VarT]
 getVars (name, vars) = vars
 
-getName :: Key -> Name
+getName :: Key -> VarT
 getName (name, vars) = name
 
 isFun :: Exp -> Bool
@@ -171,7 +169,7 @@ searchForMatch search envlist depth = let (match, generic) = functionMatcher sea
 
 prepareVarsForGenericSearch :: [VarT] -> [VarT]
 prepareVarsForGenericSearch [] = []
-prepareVarsForGenericSearch (VarN (Generic a):xs) = (VarN (Joker a)):prepareVarsForGenericSearch xs 
+prepareVarsForGenericSearch ((Generic a):xs) = (Joker a):prepareVarsForGenericSearch xs 
 prepareVarsForGenericSearch (x:xs) = x:prepareVarsForGenericSearch xs 
 -- Solamente devuelvo los que equivalen a RTrue, tambien tengo que ver que me traiga las variables
 searchForGenerics:: Key -> [(Key, Exp)] -> Bool -> Maybe Exp
@@ -185,7 +183,7 @@ searchForGenerics search envlist depth = let  vars = prepareVarsForGenericSearch
 
 searchType :: [VarT] -> Bool
 searchType [] = True
-searchType ((VarN (Generic _)):xs) = False
+searchType ((Generic _):xs) = False
 searchType (x:xs) = searchType xs
 
 functionSearch :: Key -> [(Key, Exp)] -> Bool -> Maybe Exp
@@ -198,7 +196,7 @@ insertKey k exp [] = [(k, exp)]
 insertKey k exp ((k2, exp2):xs) = if k == k2 then (k, exp):xs else (k2, exp2):(insertKey k exp xs)
 
 
-instance Ord Name where
+instance Ord VarT where
     compare (Generic _) (Value _) = GT
     compare (Generic _) (Function _) = GT
     compare (Generic _) (ReturnValue _) = GT
@@ -210,7 +208,7 @@ instance Ord Name where
     compare (Function n) (Function n2) = compare n n2
     compare (ReturnValue n) (ReturnValue n2) = compare n n2
     
-type Key = (Name, [VarT])
+type Key = (VarT, [VarT])
 type Env = [(Key, Exp)]
 
 -- Entorno nulo
@@ -226,11 +224,11 @@ instance Functor StateError where
   fmap = liftM
 
 instance Applicative StateError where
-  pure  = return
+  pure x = StateError $ \env -> Right (x :!: env)
   (<*>) = ap
 
 instance Monad StateError where
-  return x = StateError $ \env -> Right (x :!: env)
+  return = pure
   m >>= f = StateError $ \env -> case runStateError m env of
     Left e -> Left e
     Right (x :!: env') -> runStateError (f x) env'
@@ -278,23 +276,15 @@ stepComm (RTrue) = return RTrue
 
 stepComm (RFalse) = return RFalse
 
-
-
--- Esta bien esto? No tengo que evaluar c2?
-stepComm (Seq Skip c2) = return c2
-stepComm (Seq c1 c2) = do
-  c1' <- stepComm c1
-  return (Seq c1' c2)
-
 stepComm (Eq c1 c2) = do
     c1' <- stepComm c1 
     c2' <- stepComm c2
-    return (Var (VarN (ReturnValue (c1' == c2'))))
+    return (Var (ReturnValue (c1' == c2')))
 
 stepComm (NEq c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
-    return (Var (VarN (ReturnValue (c1' /= c2'))))
+    return (Var (ReturnValue (c1' /= c2')))
 
 stepComm (Or c1 c2) = do
     c1' <- stepComm c1
@@ -312,33 +302,33 @@ stepComm (Add c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
     res <- evalNums c1' c2' (+)
-    return (Var (VarN (Equation (Num res))))
+    return (Var (Equation (Num res)))
 
 stepComm (Sub c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
     res <- evalNums c1' c2' (-)
-    return (Var (VarN (Equation (Num res))))
+    return (Var (Equation (Num res)))
 
 
 evalFun name vars = lookfor name vars
 
-evalLogic (Var (VarN (ReturnValue c1))) (Var (VarN (ReturnValue c2))) op = return (op c1 c2)
-evalLogic RTrue RTrue op = return True
-evalLogic RTrue RFalse (&&) = return False
-evalLogic RFalse RTrue (&&) = return False
-evalLogic RFalse RTrue (||) = return True
-evalLogic RTrue RFalse (||) = return True
-evalLogic RFalse RFalse op = return False
-evalLogic _ _ _ = throw InvalidOp 
+expToBool RTrue = return True
+expToBool RFalse = return False
+expToBool _ = throw InvalidOp
 
-evalNums (Var (VarN (Equation a))) (Var (VarN (Equation b))) op = let e1 = evalNum a
-                                                                      e2 = evalNum b
-                                                                  in case e1 of
-                                                                       Nothing -> throw InvalidOp
-                                                                       Just e1' -> case e2 of
-                                                                                    Nothing -> throw InvalidOp
-                                                                                    Just e2' -> return (op e1' e2')
+evalLogic (Var (ReturnValue c1)) (Var (ReturnValue c2)) op = return (op c1 c2)
+evalLogic a b op = do a' <- expToBool a  
+                      b' <- expToBool b
+                      return (op a' b')
+
+evalNums (Var (Equation a)) (Var (Equation b)) op = let e1 = evalNum a
+                                                        e2 = evalNum b
+                                                    in case e1 of
+                                                          Nothing -> throw InvalidOp
+                                                          Just e1' -> case e2 of
+                                                                      Nothing -> throw InvalidOp
+                                                                      Just e2' -> return (op e1' e2')
 evalNums a b op = throw InvalidOp
 
 
