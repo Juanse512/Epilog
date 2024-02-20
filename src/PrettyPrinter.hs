@@ -25,7 +25,13 @@ printVars (var:cs) = case var of
 
 -- printVars (Var (Generic n)):cs = n ++ "," ++ (printVars cs)
 -- printVars (Var (Value n)):cs = "'" ++ n ++ "'" ++ "," ++ (printVars cs)
-
+ppEq :: EqToken -> Doc
+ppEq (Num i) = text $ show i
+ppEq (VarNum i) = text i
+ppEq (Plus a b) = ppEq a <+> text "+" <+> ppEq b
+ppEq (Minus a b) = ppEq a <+> text "-" <+> ppEq b
+ppEq (NumTimes a b) = ppEq a <+> text "*" <+> ppEq b
+ppEq (NumDiv a b) = ppEq a <+> text "/" <+> ppEq b
 
 pp :: Exp -> Doc
 pp (Fun (Function name) var) = text (name ++ "(" ++ (printVars var) ++ ")")
@@ -37,44 +43,7 @@ pp (And exp exp2) =  pp exp <+> text "&" <+> pp exp2
 pp Skip = text "."
 pp (RTrue) = text "true"
 pp (RFalse) = text "false"
--- pp ii vs (Bound k         ) = text (vs !! (ii - k - 1))
--- pp _  _  (Free  (Global s)) = text s
--- pp _  _  Unit               = text "unit"
--- pp ii vs (i :@: c         ) = sep
---   [ parensIf (isLam i || isLet i) (pp ii vs i)
---   , nest 1 (parensIf (isCompound c) (pp ii vs c))
---   ]
--- pp ii vs (Lam t c) =
---   text "\\"
---     <> text (vs !! ii)
---     <> text ":"
---     <> printType t
---     <> text ". "
---     <> pp (ii + 1) vs c
--- pp ii vs (Let t u) =
---   text "let"
---     <+> text (vs !! ii)
---     <+> text "="
---     <+> pp ii vs t
---     <+> text "in"
---     <+> pp (ii + 1) vs u
--- pp ii vs (Pair t u) =
---   text "("
---     <> pp ii vs t
---     <> text ", "
---     <> pp ii vs u
---     <> text ")"
--- pp ii vs (Fst t)  = text "fst" <+> parensIf (isCompound t) (pp ii vs t)
--- pp ii vs (Snd t)  = text "snd" <+> parensIf (isCompound t) (pp ii vs t)
--- pp ii vs Zero     = text "0"
--- pp ii vs (Suc t)  = case toInt t of
---   Just n  -> text $ show (n + 1)
---   Nothing -> text "suc" <+> parensIf (isCompound t) (pp ii vs t)
--- pp ii vs (Rec t1 t2 t3) =
---   text "rec"
---     <+> parensIf (isCompound t1) (pp ii vs t1)
---     <+> parensIf (isCompound t1) (pp ii vs t2)
---     <+> parensIf (isCompound t1) (pp ii vs t3)
+pp (Var (Equation s)) = ppEq s
 
 renderExp :: Exp -> String
 renderExp = render . pp

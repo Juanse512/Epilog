@@ -122,4 +122,16 @@ stepComm (Sub c1 c2) = do
     res <- evalNums c1' c2' (-)
     return (Var (Equation (Num res)))
 
+stepComm (Times c1 c2) = do
+    c1' <- stepComm c1
+    c2' <- stepComm c2
+    res <- evalNums c1' c2' (*)
+    return (Var (Equation (Num res)))
+
+stepComm (Div c1 c2) = do
+    c1' <- stepComm c1
+    c2' <- stepComm c2
+    res <- evalNums c1' c2' (div)
+    return (Var (Equation (Num res)))
+
 

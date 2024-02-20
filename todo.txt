@@ -1,4 +1,5 @@
 - Enteros: 
+ -- Factorial no anda
  -- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (exeq.txt)
    --Capaz conviene limitar el Int,
  -- Cambiar de int a float el Num y parsearlo
@@ -7,11 +8,9 @@ Debug:
    -- Mixear tipos de variable
 
 Cleanup:
-   -- Modularizar Logic
    -- Sacar () extras
 
 General:
-   -- Mejorar ux
    -- Documentar
    -- Comentar
 
