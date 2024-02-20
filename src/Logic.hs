@@ -68,16 +68,26 @@ compareVars var [] = var
 compareVars var ((value, generic):xs) = if var == generic then value else compareVars var xs
 compareEquationVars :: EqToken -> [(VarT, VarT)] -> EqToken
 compareEquationVars a [] = a
-compareEquationVars (VarNum s) (((VarN (Equation e)), (VarN (Generic g))):xs) | s == g = case evalNum e 0 of 
+compareEquationVars (VarNum s) (((VarN (Equation e)), (VarN (Generic g))):xs) | s == g = case evalNum e of 
                                                                                             Just ev -> (Num ev)
                                                                                             Nothing -> (VarNum s)
                                                                               | otherwise = compareEquationVars (VarNum s) xs
 compareEquationVars a (x:xs) = compareEquationVars a xs
 
-searchForVarsInEq :: [EqToken] -> [(VarT, VarT)] -> [EqToken]
-searchForVarsInEq [] map = []
-searchForVarsInEq ((VarNum x):xs) map = (compareEquationVars (VarNum x) map):searchForVarsInEq xs map
-searchForVarsInEq (x:xs) map = x:searchForVarsInEq xs map
+-- searchForVarsInEq :: [EqToken] -> [(VarT, VarT)] -> [EqToken]
+-- searchForVarsInEq [] map = []
+-- searchForVarsInEq ((VarNum x):xs) map = (compareEquationVars (VarNum x) map):searchForVarsInEq xs map
+-- searchForVarsInEq (x:xs) map = x:searchForVarsInEq xs map
+searchForVarsInEq :: EqToken -> [(VarT, VarT)] -> EqToken
+searchForVarsInEq (VarNum x) map = (compareEquationVars (VarNum x) map)
+searchForVarsInEq (Plus a b) map = Plus (searchForVarsInEq a map) (searchForVarsInEq b map)
+searchForVarsInEq (Minus a b) map = Minus (searchForVarsInEq a map) (searchForVarsInEq b map)
+searchForVarsInEq (NumTimes a b) map = NumTimes (searchForVarsInEq a map) (searchForVarsInEq b map)
+searchForVarsInEq (NumDiv a b) map = NumDiv (searchForVarsInEq a map) (searchForVarsInEq b map)
+searchForVarsInEq a map = a
+
+
+
 
 replaceGenericVars :: [VarT] -> [(VarT, VarT)] -> Maybe [VarT]
 replaceGenericVars [] xs = return []
@@ -85,8 +95,8 @@ replaceGenericVars ((VarN (Generic s)):xs) xss = do rest <- replaceGenericVars x
                                                     return ((compareVars (VarN (Generic s)) xss):rest)
 replaceGenericVars ((VarN (Equation eq)):xs) xss = do rest <- replaceGenericVars xs xss 
                                                       let eqT = searchForVarsInEq eq xss
-                                                      evalEq <- evalNum eqT 0
-                                                      return ((VarN (Equation ([Num evalEq]))):rest)
+                                                      evalEq <- evalNum eqT
+                                                      return ((VarN (Equation (Num evalEq))):rest)
 replaceGenericVars (x:xs) xss = do rest <- replaceGenericVars xs xss
                                    return (x:rest)
 
@@ -302,13 +312,13 @@ stepComm (Add c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
     res <- evalNums c1' c2' (+)
-    return (Var (VarN (Equation [Num res])))
+    return (Var (VarN (Equation (Num res))))
 
 stepComm (Sub c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
     res <- evalNums c1' c2' (-)
-    return (Var (VarN (Equation [Num res])))
+    return (Var (VarN (Equation (Num res))))
 
 
 evalFun name vars = lookfor name vars
@@ -322,8 +332,8 @@ evalLogic RTrue RFalse (||) = return True
 evalLogic RFalse RFalse op = return False
 evalLogic _ _ _ = throw InvalidOp 
 
-evalNums (Var (VarN (Equation a))) (Var (VarN (Equation b))) op = let e1 = evalNum a 0
-                                                                      e2 = evalNum b 0
+evalNums (Var (VarN (Equation a))) (Var (VarN (Equation b))) op = let e1 = evalNum a
+                                                                      e2 = evalNum b
                                                                   in case e1 of
                                                                        Nothing -> throw InvalidOp
                                                                        Just e1' -> case e2 of

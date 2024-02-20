@@ -40,6 +40,8 @@ import Helpers
 -- Asignar ordenes
 %nonassoc '.' 
 %right ':='
+%left '+' '-'
+%left '*' '/'
 %%
 
 Exps  :: {[Exp]}
@@ -84,12 +86,12 @@ lst     : '[' varlst ']'               {VarN (List $2)}
 eqs :: { VarT }
 eqs     : '{' nums '}'                   {VarN (Equation $2)}
 
-nums :: { [EqToken] }
+nums :: { EqToken }
 nums    : VAR                           {lexNum $1}
-        | nums '+' nums                 {$1 ++ [Plus] ++ $3}
-        | nums '-' nums                 {$1 ++ [Minus] ++ $3}
-        | nums '*' nums                 {$1 ++ [NumTimes] ++ $3}
-        | nums '/' nums                 {$1 ++ [NumDiv] ++ $3}
+        | nums '+' nums                 {Plus $1 $3}
+        | nums '-' nums                 {Minus $1 $3}
+        | nums '*' nums                 {NumTimes $1 $3}
+        | nums '/' nums                 {NumDiv $1 $3}
 
 varlst :: { [VarT] }
         : VAR                          {[generateVar $1]}

@@ -6,7 +6,12 @@ instance Functor Stmt where
     fmap f (Def s i) = Def s (f i)
     fmap f (Eval i)  = Eval (f i)
 
-data EqToken = Plus | Minus | NumTimes | NumDiv | VarNum String | Num Int deriving (Show, Eq)
+data EqToken = Plus EqToken EqToken 
+             | Minus EqToken EqToken
+             | NumTimes EqToken EqToken
+             | NumDiv EqToken EqToken
+             | VarNum String 
+             | Num Int deriving (Show, Eq)
 
 -- Tipos de los nombres
 data Name = Generic String
@@ -14,7 +19,7 @@ data Name = Generic String
           | Function String
           | ReturnValue Bool
           | Joker String
-          | Equation [EqToken]
+          | Equation EqToken
           | List [VarT]
           | HeadTail Name Name
     deriving (Show, Eq)
