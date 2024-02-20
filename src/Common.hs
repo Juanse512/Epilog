@@ -45,7 +45,8 @@ data Value = Val Bool
            | VarRes VarT
 
 -- Entornos
-
+type Key = (VarT, [VarT])
+type Env = [(Key, Exp)]
 
 data Error = UndefVar | InvalidOp | WrongDef deriving (Eq, Show)
 

@@ -4,7 +4,7 @@ import Common
 import Data.Maybe
 import Data.Char
 import Data.List
-import Helpers
+import Equations
 }     
 %monad { P } { thenP } { returnP }
 %name parse
