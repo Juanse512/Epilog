@@ -1,21 +1,30 @@
 - Enteros: 
- -- Si pongo una ecuacion adentro de una definicion se evalua y no se guarda (int.txt)
- -- Ver que pasa y handlear cuando hago una query generica a una funcion con ecuacion
  -- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (exeq.txt)
-- Listas:
+    Capaz conviene limitar el Int,
+ -- Agregar operadores (* /) y sus prioridades, cambiar Num de int a float
 
+Debug:
+   -- Mixear tipos de variable
 
 lexer:
    --entre {} no se pueden poner espacios
 
+Cleanup:
+   -- Modularizar Logic
+   -- Sacar seq
+   -- Sacar VarN?
+   -- Sacar () extras
+
 General:
-   -- Emprolijar ui
-   -- Limpiar gramatica (No se si es tan necesario ahora)
+   -- Mejorar ux
    -- Documentar
    -- Comentar
 
 
-
-
-
-- Revisar que el seq funcione -- Vale la pena mantener el seq si tengo and or etc? Creo que no
+Review:
+- Enteros: 
+ -- Ver que pasa y handlear cuando hago una query generica a una funcion con ecuacion
+   Tira UndefVar, puede ser correcto
+General:
+   -- Limpiar gramatica (No se si es tan necesario ahora)
+- Listas:

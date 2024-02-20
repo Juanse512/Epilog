@@ -169,12 +169,18 @@ lexer (c:cs) | isSpace c = lexer cs
                                 else
                                         -- El problema esta en este span, separa por espacios creo
                                         case span (\x -> ((isAlpha x || isDigit x || x == '\'' || isMath x) && x /= '\n')) cs of
+                                        -- case mySpan cs of
                                                 ("true", rest) -> TTrue : (lexer rest)
                                                 ("false", rest) -> TFalse : (lexer rest)
                                                 (cs, rest) -> if bracketIdx /= Nothing && ((bracketIdx <= bracketOpenIdx) || (bracketOpenIdx == Nothing))
                                                               then let var = getEq cs in (TVar var) : lexer (getRest rest)
                                                               else let var = getVar cs in (TVar var) : lexer (getRest rest)
-                                                
+
+                mySpan [] = ([],[])
+                mySpan ('{':cs) = let (res, rest) = (span (/='}') cs) in ('{':res, rest)
+                mySpan (x:cs) = if ((isAlpha x || isDigit x || x == '\'' || isMath x) && x /= '\n') 
+                                then let (res, rest) = mySpan cs in (x:res, rest)
+                                else ([], cs)              
                 getVar [] = []
                 getVar (')':cs) = []
                 getVar (',':cs) = []
@@ -188,7 +194,6 @@ lexer (c:cs) | isSpace c = lexer cs
                 getEq (',':cs) = []
                 getEq ('(':cs) = []
                 getEq (':':cs) = []
-                getEq (' ':cs) = (getEq cs)
                 getEq (c:cs) = c : (getEq cs)
 
                 getRest [] = []

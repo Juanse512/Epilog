@@ -15,11 +15,7 @@ import           Control.Monad                  ( liftM
                                                 , ap
                                                 )
 
--- Entornos
--- data Name = Generic String
-          -- | Value String
-          -- | Function String
-          -- | ReturnValue Bool
+
 varMatcher :: [VarT] -> [VarT] -> Bool
 varMatcher [] [] = True
 varMatcher [] xs = False
@@ -38,7 +34,6 @@ genericVarMatcher ((VarN (Equation s)):xs) ((VarN (Equation ss)):xss) = if s == 
 genericVarMatcher ((VarN (Generic s)):xs) ((VarN (Equation ss)):xss) = genericVarMatcher xs xss 
 genericVarMatcher ((VarN (Value s)):xs) ((VarN (Value ss)):xss) = if s == ss then genericVarMatcher xs xss else False
 genericVarMatcher ((VarN (List s)):xs) ((VarN (List ss)):xss) = if s == ss then genericVarMatcher xs xss else False
--- ^ esto no se puede hacer en haskell creo 
 genericVarMatcher ((VarN (List [])):xs) ((VarN (HeadTail _ _)):xss) = False
 genericVarMatcher ((VarN (List s)):xs) ((VarN (HeadTail _ _)):xss) = genericVarMatcher xs xss
 genericVarMatcher ((VarN (Joker s)):xs) (x:xss) = False
@@ -120,10 +115,7 @@ replaceFunctionVars vars (Sub a b) = do fa <- (replaceFunctionVars vars a)
                                         fb <- (replaceFunctionVars vars b)
                                         return (Sub fa fb)  
 replaceFunctionVars vars exp = return exp
--- replaceFunctionVars vars (Eq a b) = Eq (replaceFunctionVars vars a) (replaceFunctionVars vars b)
--- replaceFunctionVars vars (NEq a b) = NEq (replaceFunctionVars vars a) (replaceFunctionVars vars b)
--- replaceFunctionVars vars (And a b) = And (replaceFunctionVars vars a) (replaceFunctionVars vars b)
--- replaceFunctionVars vars (Or a b) = Or (replaceFunctionVars vars a) (replaceFunctionVars vars b)
+
 
 
 
@@ -141,6 +133,7 @@ isFun _ = False
 splitFun :: Exp -> Key
 splitFun (Fun name vars) = (name, vars)
 
+
 searchForMatch:: Key -> [(Key, Exp)] -> Bool -> Maybe Exp
 searchForMatch search envlist depth = let (match, generic) = functionMatcher search envlist
                                       in case (searchResult ((map Prelude.fst match) ++ (map Prelude.fst generic))) of
@@ -153,16 +146,15 @@ searchForMatch search envlist depth = let (match, generic) = functionMatcher sea
                                                                             searchResultM = (replaceFunctionVars varsPair exp)
                                                                         in case searchResultM of
                                                                             Just searchResult ->  if not depth then Just searchResult
-                                                                                                  else if not (isFun searchResult) 
-                                                                                                            then Just searchResult
-                                                                                                            else let resKey = splitFun searchResult
-                                                                                                                     dupSearch = searchForMatch resKey envlist False
-                                                                                                                  in case dupSearch of
-                                                                                                                        -- Just x -> Just x
-                                                                                                                        Just x -> if x == (Fun (getName search) (getVars search))
-                                                                                                                                  then Nothing
-                                                                                                                                  else Just searchResult
-                                                                                                                        Nothing -> Just searchResult
+                                                                                                  else  if not (isFun searchResult) 
+                                                                                                             then Just searchResult
+                                                                                                        else let resKey = splitFun searchResult
+                                                                                                                 dupSearch = searchForMatch resKey envlist False
+                                                                                                              in case dupSearch of
+                                                                                                                    Just x -> if x == (Fun (getName search) (getVars search))
+                                                                                                                              then Nothing
+                                                                                                                              else Just searchResult
+                                                                                                                    Nothing -> Just searchResult
                                                                             Nothing -> Nothing
                                                                                   
                                                           xs -> Just (Prelude.fst (head xs))
@@ -209,10 +201,6 @@ instance Ord Name where
     compare (ReturnValue n) (ReturnValue n2) = compare n n2
     
 type Key = (Name, [VarT])
--- instance Ord Key where
---     compare (K (n1, v1)) (K (n2, v2)) = if v1 /= v2 then compare n1 n2 else LT
--- instance Eq Key where
---     (K (n1, vars1)) == (K (n2, vars2)) = (n1 == n2) && (vars1 == vars2)
 type Env = [(Key, Exp)]
 
 -- Entorno nulo
@@ -239,16 +227,6 @@ instance Monad StateError where
 
 instance MonadError StateError where
   throw e = StateError $ \_ -> Left e
-
--- Modificar funcion de busqueda
--- Logica de busqueda:
--- 1) Si hay returnValue devolver ese
--- 2) Si no, buscar matches con values
--- 3) Si no, buscar matches con generic y luego reemplazar las variables
--- 4) Si hay mas de un match, ver que hace prolog y copiarlo
--- keyToList :: [(Key, Exp)] -> [((Name, [VarT]), Exp)]
--- keyToList [] = []
--- keyToList ((K p, exp):xs) = (p, exp):(keyToList xs)
 
 
 instance MonadState StateError where
@@ -289,10 +267,7 @@ stepComm (RTrue) = return RTrue
     
 
 stepComm (RFalse) = return RFalse
--- stepComm (Seq c1 c2) = do
---     c1' <- eval c1
---     c2' <- eval c2
---     return c2'
+
 
 
 -- Esta bien esto? No tengo que evaluar c2?
@@ -304,7 +279,6 @@ stepComm (Seq c1 c2) = do
 stepComm (Eq c1 c2) = do
     c1' <- stepComm c1 
     c2' <- stepComm c2
-    -- return Right (c1' == c2' :!: env)
     return (Var (VarN (ReturnValue (c1' == c2'))))
 
 stepComm (NEq c1 c2) = do
@@ -357,9 +331,4 @@ evalNums (Var (VarN (Equation a))) (Var (VarN (Equation b))) op = let e1 = evalN
                                                                                     Just e2' -> return (op e1' e2')
 evalNums a b op = throw InvalidOp
 
-  
--- stepComm (IfThenElse b c1 c2) = do
---   b' <- evalExp b
---   if b' then return c1 else return c2
 
--- stepComm r@(While bexp c) = return $ IfThenElse bexp r Skip
