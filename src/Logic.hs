@@ -46,15 +46,18 @@ instance MonadState StateError where
         Nothing -> Left UndefVar
         Just fun -> Right (fun :!: env)
   update v vars x = StateError $ \env -> Right (() :!: insertKey (v,vars) x env) 
-                                          
+
+-- eval: Dada una lista de expresiones, se evaluan partiendo de un entorno vacio 
 eval :: [Exp] -> Either Error Exp
 eval xs = eval' xs initEnv
 
+-- eval': Evalua una lista de expresiones con un entorno dado
 eval' :: [Exp] -> Env -> Either Error Exp
 eval' [x] env = runStateError (stepComm x) env >>= (\e -> return (Data.Strict.Tuple.fst e))
 eval' (x:Skip:xs) env = runStateError (stepComm x) env >>= (\e -> return (Data.Strict.Tuple.fst e))
 eval' (x:xs) env = runStateError (stepComm x) env >>= (\e -> eval' xs (Data.Strict.Tuple.snd e))
 
+-- stepComm: Evalua un Exp acorde a su función
 stepComm :: (MonadState m, MonadError m) => Exp -> m Exp
 stepComm Skip = return Skip
 
@@ -78,12 +81,12 @@ stepComm (RFalse) = return RFalse
 stepComm (Eq c1 c2) = do
     c1' <- stepComm c1 
     c2' <- stepComm c2
-    return (Var (ReturnValue (c1' == c2')))
+    if (c1' == c2') then return RTrue else return RFalse
 
 stepComm (NEq c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
-    return (Var (ReturnValue (c1' /= c2')))
+    if (c1' /= c2') then return RTrue else return RFalse
 
 stepComm (Or c1 c2) = do
     c1' <- stepComm c1

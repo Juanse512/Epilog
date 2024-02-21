@@ -1,7 +1,8 @@
-# TP 3 - ALP - 2020
-
+# Epilog
+## TP Final ALP Juan Segundo Valero
 ## Introducción
-Hola! Este README es un documento complementario al PDF de la consigna del TP. Para este trabajo no van a necesitar nada nuevo, solamente se repiten las intrucciones básicas de `stack`. Si hicieron los TPs 1 y 2, lo único que les va a ser útil  es la sección **Estructura del código**.
+Trabajo práctico final de la materia Análisis de Lenguajes de Programación.
+Se creó un lenguaje de programación lógica, inicialmente basado en Prolog, aunque con varios cambios en el funcionamiento, que se van a especificar en este documento.
 
 ### Stack
 Para este TP vamos a usar [**Stack**](https://docs.haskellstack.org/), una herramienta sencilla para desarrollar poryectos en Haskell. Stack tiene muchas utilidades, pero ahora nos vamos a concentrar sus funciones básicas.
@@ -26,40 +27,131 @@ La estructura del proyecto es la siguiente:
 │   └── Main.hs
 ├── src
 │   ├── Common.hs
-│   ├── Simplytyped.hs
+│   ├── Equations.hs
 │   ├── PrettyPrinter.hs
-│   └── Parse.y
+│   ├── Parse.y  
+│   ├── Monads.hs  
+│   ├── VarMatch.hs  
+│   ├── Helpers.hs  
+│   └── Logic.hs
 ├── Ejemplos
 │   └── Prelude.lam
-├── test
 ├── README.md
 ├── Setup.hs
-├── TPFinal.cabal
 ├── package.yaml
 ├── stack.yaml
 └── stack.yaml.lock
 ```
-**IMPORTANTE:** Solo deberían tener que modificar archivos de los directorios `src` y `Ejemplos`.
-
 * En el directorio `app` se define el módulo `Main`, que implementa el ejecutable final. 
 
-* En el directorio `src` se encuentran los módulos sobre los que van a trabajar:
-  - `Common` define los tipos de términos y valores en la consigna junto a algunos tipos auxiliares. **Los tipos definidos en este archivo ya cuentan con todas las extensiones planteadas en el TP, por lo que no deberían tener que modificarlo.**
-  - `PrettyPrinter` tiene el Pretty Printer del lenguaje, **parcialmente implementado**. 
-  - `Parse.y` define el parser, que está **parcialmente implementado**. Para ello, este archivo especifica la gramática en BNF y provee el lexer. El módulo `Parse.hs` es generado por la herramienta `Happy` (explicada en la Sección 3 de la consigna) al hacer `stack build`, y se guarda en un directorio oculto.
-  - `Simplytyped` tiene las funciones que hacen funcionar al intérprete y el inferidor de tipos, ambos **parcialmente implementados**.
+* En el directorio `src` se encuentra la fuente del programa principal:
+  - `Common` define los tipos de términos y valores necesarios para el funcionamiento del programa
+  - `PrettyPrinter` tiene el Pretty Printer del lenguaje. 
+  - `Parse.y` define el parser. Para ello, este archivo especifica la gramática en BNF y provee el lexer. El módulo `Parse.hs` es generado por la herramienta `Happy` al hacer `stack build`, y se guarda en un directorio oculto.
+  - `Equations` contiene las funciones que se encargan de hacer las operaciones numericas.
+  - `Monads` contiene las definiciones de las monadas.
+  - `VarMatch` contiene la lógica para la busqueda de funciones y matcheo de variables.
+  - `Helpers` contiene funciones auxiliares.
+  - `Logic` contiene el evaluador del programa.
 
-* En el directorio `Ejemplos` está el preludio, con algunos términos del lambda cálculo simplemente tipado (STLC). En este directorio van a resolver el ejercicio 11.
+* En el directorio `Ejemplos` se encuentran algunos programas para demostrar el funcionamiento del lenguaje.
 
-* El resto de los archivos son de configuración del proyecto.
 
-**IMPORTANTE:** Por favor, no cambiar los nombres de los módulos, tipos, constructores, funciones, etc. Ante cualquier duda consulte a su docente de cabecera.
+### Ejecución
 
-### ¿Cómo ejecutarlo?
+Primero se compila el proyecto, utilizando
+```
+stack build
+``` 
 
-Una vez compilado el proyecto, se puede correr el ejecutable definido en `app/Main.hs` haciendo:
+Una vez compilado, se puede correr el ejecutable haciendo:
 ```
 stack exec TPFinal-exe 
 ```
 
-Esto lanzará el evaluador interactivo de lambda cálculo simplemente tipado a implementar en este trabajo. Con el comando `:?` pueden leer sobre el resto de los comandos disponibles.
+Una vez ejecutado, se solicitará el ingreso de un archivo que contenga el programa a ejecutar.
+
+## Reglas del lenguaje
+Este lenguaje se basa en la asignación de valores a funciones con variables.
+* Hay cuatro tipos de variables
+  - `Valores` se definen entre '' y se interpretan como valores atómicos, ej: 'var', 'arg'.
+  - `Genericas` se escriben sin '' y como indica su nombre son variables genéricas, pueden ser reemplazadas por valores, ej: A, B.
+  - `Ecuaciones` son ecuaciones matemáticas y números, se escriben entre {}, ej: {1 + 2}, {1}, {A - 1}.
+  - `Listas` listas de valores, se pueden pasar como argumentos o separar en head y tail como en Haskell (x:xs), ej: ['a', 'b', 'c'], [], ['a'].
+
+Todas las instrucciones tienen que tener un terminador, que es el carácter `.`
+
+Para asignar un valor a una función se hace de la siguiente manera:
+```
+function('arg', 'arg2') := true.
+```
+Para hacer una query a una función con sus argumentos se hace de la siguiente manera:
+```
+function('arg', 'arg2').
+````
+Esto va a devolver, o bien un valor de retorno, o un error.
+
+### Operaciones lógicas disponibles
+  - `&&` And 
+  - `||` Or 
+  - `==` Igualdad 
+  - `!=` Negación 
+
+### Queries genéricas
+Al igual que en Prolog, se pueden hacer queries de funciones con variables genéricas y se devuelven los posibles valores que pueden tomar esas variables para que devuelva true la función. Por ejemplo:
+```
+fun('b', 'c') := true.
+fun('d', 'e') := true.
+fun('x', 'y') := true.
+fun(A, B).
+```
+Resultado:
+```
+A='b','d','x'
+B='c','e','y'
+```
+En el caso de tener más de una variable genérica, como en el ejemplo anterior, las columnas del resultado representan el conjunto de valores que tienen que tener de manera simultánea, en este ejemplo, fun('b', 'c'), fun('d', 'e') y fun('x', 'y') son true.
+
+Como en Prolog, esto solo funciona para variables y funciones que son directamente true, es decir si se da el caso:
+```
+fun('b', 'c') := true.
+fun(A, B) := fun(B, A).
+fun(A, B).
+```
+El resultado solo va a tener en cuenta a fun('b', 'c').
+
+Prolog también permite hacer operaciones con números utilizando este sistema de variables genéricas, en este lenguaje esto es reemplazado por las ecuaciones que se verán en el apartado siguiente.
+
+### Ecuaciones
+A diferencia de Prolog, este lenguaje permite devolver valores númericos, esto da la posibilidad de escribir funciones con enteros de la siguiente manera:
+```
+factorial({0}) := {1}.
+factorial({1}) := {1}.
+factorial(A) := {A} * factorial({A - 1}).
+factorial({5}).
+```
+Como se puede observar, todo lo que tiene que ser interpretado como una ecuación aritmética va entre `{}` para separarlo de las variables booleanas.
+* Las operaciones aritméticas permitidas son:
+    - `+` Suma
+    - `-` Resta
+    - `*` Multiplicación
+    - `/` División
+
+Con el orden precedencia estándar.
+
+### Listas
+Se pueden crear programas que trabajen con listas de la siguiente manera:
+```
+len([]) := {0}.
+len(x:xs) := {1} + len(xs).
+len(['a', 'b', 'c']).
+```
+Las listas se definen entre `[]` y pueden ser pasadas como argumento para hacer una consulta.
+
+A la hora de definir funciones, las listas pueden ser pasadas como argumento o se puede separar el head del tail como en Haskell con `:`.
+
+### Errores
+* Puede haber tres tipos de errores en la ejecución del programa
+  - `Error de Parseo` Como indica el texto, si hubo algun error en el parseo del programa.
+  - `UndefVar` Cuando se está queriendo hacer una consulta de una función que no existe para el tipo de datos solicitado.
+  - `InvalidOp` Se esta queriendo hacer una operación inválida, esto pueden ser operaciones lógicas con valores aritméticos (o viceversa) u operaciones que combinan ambos tipos de dato

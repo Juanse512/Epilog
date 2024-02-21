@@ -3,7 +3,8 @@ import Common
 import Equations
 import Helpers
 import Data.List
-
+-- varMatcher: Compara dos listas de variables y retorna si coinciden completamente
+-- se utiliza el Joker en el caso de la busqueda generica
 varMatcher :: [VarT] -> [VarT] -> Bool
 varMatcher [] [] = True
 varMatcher [] xs = False
@@ -11,7 +12,9 @@ varMatcher xs [] = False
 varMatcher ((Value s):xs) ((Value ss):xxs) = if s == ss then varMatcher xs xxs else False
 varMatcher ((Joker _):xs) ((Value ss):xxs) = varMatcher xs xxs
 varMatcher _ _ = False
-
+-- genericVarMatcher: Compara dos listas de variables y retorna si coinciden
+-- con el criterio de las variables genericas, es decir, si hay una variable generica
+-- o una ecuacion se permite devolver True
 genericVarMatcher :: [VarT] -> [VarT] -> Bool
 genericVarMatcher [] [] = True
 genericVarMatcher [] xs = False
@@ -28,7 +31,10 @@ genericVarMatcher ((List s):xs) ((HeadTail _ _):xss) = genericVarMatcher xs xss
 genericVarMatcher ((Joker s):xs) (x:xss) = False
 genericVarMatcher ((Value s):xs) ((Equation ss):xss) = False
 
-functionMatcher :: (VarT, [VarT]) -> [((VarT, [VarT]), Exp)] -> ([(Exp, [VarT])], [(Exp, [VarT])])
+-- functionMatcher: Dada una key y un entorno, devuelve un par de arrays, el primero
+-- contiene los matches perfectos y las variables que contiene, y segundo
+-- los matches genericos con sus variables
+functionMatcher :: Key -> [(Key, Exp)] -> ([(Exp, [VarT])], [(Exp, [VarT])])
 functionMatcher (name, vars) [] = ([], [])
 functionMatcher (name, vars) (((fname, fvars), exp):xs) | name == fname =  let varMatch = varMatcher vars fvars
                                                                                genericMatch = genericVarMatcher vars fvars
@@ -38,12 +44,16 @@ functionMatcher (name, vars) (((fname, fvars), exp):xs) | name == fname =  let v
                                                                                     else (left, right)
                                                         | otherwise = functionMatcher (name, vars) xs
 
+-- searchResult: Detecta si hay alguna respuesta booleana en los resultados de la busqueda
 searchResult :: [Exp] -> Maybe Exp
 searchResult [] = Nothing
 searchResult ((RTrue):xs) = Just RTrue
 searchResult ((RFalse):xs) = Just RFalse
 searchResult (x:xs) = searchResult xs
 
+-- pairGenericVars: Dadas las variables de la busqueda y las variables del resultado de esta
+-- devuelve un par que empareja las variables segun su posicion en la llamada
+-- esto es util a la hora de reemplazar variables cuando tenemos un resultado generico 
 pairGenericVars :: [VarT] -> [VarT] -> [(VarT, VarT)]
 pairGenericVars [] xss = []
 pairGenericVars xs [] = []
@@ -53,9 +63,14 @@ pairGenericVars ((Equation s):xs) ((Generic y):xss) = ((Equation s),(Generic y))
 pairGenericVars ((List s):xss) ((HeadTail x xs):xsss) = (head s,x):((List (tail s)),xs):pairGenericVars xss xsss
 pairGenericVars (x:xs) (y:ys) = pairGenericVars xs ys
 
+-- compareVars: Dada una variable generica y el mapa generado en pairGenericVars, buscamos la variable 
+-- y devolvemos el valor a reemplazar
 compareVars :: VarT -> [(VarT, VarT)] -> VarT
 compareVars var [] = var
 compareVars var ((value, generic):xs) = if var == generic then value else compareVars var xs
+
+-- compareEquationVars: Dada una variable de ecuacion y el mapa generado en pairGenericVars, reemplaza
+-- las variables dentro de la ecuación por el valor correspondiente
 compareEquationVars :: EqToken -> [(VarT, VarT)] -> EqToken
 compareEquationVars a [] = a
 compareEquationVars (VarNum s) ((Equation e, Generic g):xs) | s == g = case evalNum e of 
@@ -64,6 +79,8 @@ compareEquationVars (VarNum s) ((Equation e, Generic g):xs) | s == g = case eval
                                                                               | otherwise = compareEquationVars (VarNum s) xs
 compareEquationVars a (x:xs) = compareEquationVars a xs
 
+-- searchForVarsInEq: Dada una ecuacion y el mapa generado en pairGenericVars, reemplaza
+-- las variables dentro de la ecuacion recursivamente
 searchForVarsInEq :: EqToken -> [(VarT, VarT)] -> EqToken
 searchForVarsInEq (VarNum x) map = compareEquationVars (VarNum x) map
 searchForVarsInEq (Plus a b) map = Plus (searchForVarsInEq a map) (searchForVarsInEq b map)
@@ -72,9 +89,8 @@ searchForVarsInEq (NumTimes a b) map = NumTimes (searchForVarsInEq a map) (searc
 searchForVarsInEq (NumDiv a b) map = NumDiv (searchForVarsInEq a map) (searchForVarsInEq b map)
 searchForVarsInEq a map = a
 
-
-
-
+-- replaceGenericVars: Dada una lista de variables y el mapa generado en pairGenericVars, reemplaza 
+-- las variables dentro de las ecuaciones y las variables genericas por los valores correspondientes
 replaceGenericVars :: [VarT] -> [(VarT, VarT)] -> Maybe [VarT]
 replaceGenericVars [] xs = return []
 replaceGenericVars ((Generic s):xs) xss = do rest <- replaceGenericVars xs xss
@@ -86,6 +102,8 @@ replaceGenericVars ((Equation eq):xs) xss = do  rest <- replaceGenericVars xs xs
 replaceGenericVars (x:xs) xss = do rest <- replaceGenericVars xs xss
                                    return (x:rest)
 
+-- replaceFunctionVars: Dado el mapa generado en pairGenericVars y un expresión, reemplaza
+-- las variables dentro de la expresión recursivamente
 replaceFunctionVars :: [(VarT, VarT)] -> Exp -> Maybe Exp
 replaceFunctionVars vars (Fun name fvars) = do fvars <- (replaceGenericVars fvars vars)
                                                return (Fun name fvars)
@@ -118,6 +136,17 @@ replaceFunctionVars vars (Div a b) = do fa <- (replaceFunctionVars vars a)
                                         return (Div fa fb)  
 replaceFunctionVars vars exp = return exp
 
+-- searchForMatch: Dada una key, un entorno y una flag devuelve la expresión asociada a esa key.
+-- Siempre se prioriza obtener un resultado booleano, es decir si tengo una función 
+-- que resulta en true o false, se devuelve eso aunque tenga otras definiciones. 
+-- Luego se buscan matches perfectos con las variables dadas, si eso no se encuentra,
+-- se devuelve un match genérico. 
+-- Si se da el caso de un match genérico, se vuelve a hacer una busqueda con el resultado y las 
+-- variables reemplazadas, si se da el mismo resultado, quiere decir que va a entrar en un bucle
+-- ya que no hay un resultado válido al final de la cadena de ejecución y que
+-- la expresión que se consiguió es la única válida, para eso se utiliza
+-- la flag depth, si esta en True se hace solo una busqueda de un nivel, si esta en False,
+-- se hace este checkeo
 searchForMatch:: Key -> [(Key, Exp)] -> Bool -> Maybe Exp
 searchForMatch search envlist depth = let (match, generic) = functionMatcher search envlist
                                       in case (searchResult ((map Prelude.fst match) ++ (map Prelude.fst generic))) of
@@ -143,11 +172,17 @@ searchForMatch search envlist depth = let (match, generic) = functionMatcher sea
                                                                                   
                                                           xs -> Just (Prelude.fst (head xs))
 
+-- prepareVarsForGenericSearch: Para el caso de la busqueda genérica, se reemplazan
+-- las variables genericas por un token Joker para representar que puede ir cualquier
+-- valor en esa posición
 prepareVarsForGenericSearch :: [VarT] -> [VarT]
 prepareVarsForGenericSearch [] = []
 prepareVarsForGenericSearch ((Generic a):xs) = (Joker a):prepareVarsForGenericSearch xs 
 prepareVarsForGenericSearch (x:xs) = x:prepareVarsForGenericSearch xs 
--- Solamente devuelvo los que equivalen a RTrue, tambien tengo que ver que me traiga las variables
+
+-- searchForGenerics: Dada una Key con variables genericas y un entorno se realiza la busqueda generica.
+-- Esto devuelve todos los valores que pueden tomar las variables genericas para retornar true
+-- No se tienen en cuenta definiciones recursivas
 searchForGenerics:: Key -> [(Key, Exp)] -> Bool -> Maybe Exp
 searchForGenerics search envlist depth = let  vars = prepareVarsForGenericSearch (getVars search)
                                               name = getName search
@@ -156,12 +191,14 @@ searchForGenerics search envlist depth = let  vars = prepareVarsForGenericSearch
                                          in case matches of
                                               [] -> Nothing
                                               xs -> Just (ReturnVars (transpose ((getVars search):varArr)))
-
+-- searchType: Revisa si dentro de la lista de variables hay genericas, si ese es el caso
+-- devuelvo False para hacer una busqueda generica, si no devuelve True y hace una busqueda normal
 searchType :: [VarT] -> Bool
 searchType [] = True
 searchType ((Generic _):xs) = False
 searchType (x:xs) = searchType xs
 
+-- functionSearch: Dada una key y un entorno, devuelve la expresion asociada a esa key
 functionSearch :: Key -> [(Key, Exp)] -> Bool -> Maybe Exp
 functionSearch search envlist depth = if searchType (getVars search) then
                                          searchForMatch search envlist depth  

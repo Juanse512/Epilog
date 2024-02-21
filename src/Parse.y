@@ -9,7 +9,6 @@ import Equations
 %monad { P } { thenP } { returnP }
 %name parse
 %error { parseError }
--- %name Exp
 
 %tokentype { Token }
 
@@ -92,6 +91,7 @@ nums    : VAR                           {lexNum $1}
         | nums '*' nums                 {NumTimes $1 $3}
         | nums '/' nums                 {NumDiv $1 $3}
 
+-- Nota: 
 varlst :: { [VarT] }
         : VAR                          {[generateVar $1]}
         | varlst ',' VAR               {$1 ++ [(generateVar $3)]}
@@ -118,18 +118,18 @@ catchP m k = case m of
                         Failed e -> k e
 
 parseError :: [Token] -> P a
-parseError tokens = failP "Parse error"
+parseError tokens = failP "Error de Parseo"
 
 data Token = TVar String
            | TFun String
-           | TOpen--
-           | TClose--
-           | TComa--
-           | TAssgn --
-           | TEq--
-           | TNeq--
-           | TAnd--
-           | TOr--
+           | TOpen
+           | TClose
+           | TComa
+           | TAssgn 
+           | TEq
+           | TNeq
+           | TAnd
+           | TOr
            | TTrue
            | TFalse
            | TDot
@@ -175,16 +175,19 @@ lexer (c:cs) | isSpace c = lexer cs
                                 bracketIdx = (elemIndex '}' cs)
                                 bracketOpenIdx = (elemIndex '{' cs)
                             in
+                                -- Si tengo paréntesis, tengo una función
                                 if ((bracketIdx == Nothing) || (bracketIdx >= openParIdx)) && openParIdx /= Nothing && openParIdx < closeParIdx && ((openParIdx < enterIdx && enterIdx /= Nothing) || enterIdx == Nothing) then
                                         (TFun (takeWhile (/= '(') cs)) : lexer ((dropWhile (/= '(')) cs)
                                 else
+                                        -- Obtengo todo el string valido
                                         case span (\x -> ((isAlpha x || isDigit x || x == '\'') && x /= '\n')) cs of
                                                 ("true", rest) -> TTrue : (lexer rest)
                                                 ("false", rest) -> TFalse : (lexer rest)
+                                                        -- Si tengo {} estoy dentro de una ecuacion, si no tengo una variable
                                                 (cs, rest) -> if bracketIdx /= Nothing && ((bracketIdx <= bracketOpenIdx) || (bracketOpenIdx == Nothing))
                                                               then let var = getEq cs in (TVar var) : lexer (getRest rest)
                                                               else let var = getVar cs in (TVar var) : lexer (getRest rest)
-     
+                -- Obtiene el nombre de una variable
                 getVar [] = []
                 getVar (')':cs) = []
                 getVar (',':cs) = []
@@ -193,12 +196,14 @@ lexer (c:cs) | isSpace c = lexer cs
                 getVar (' ':cs) = []
                 getVar (c:cs) = c : (getVar cs)
                 
+                -- Obtiene una ecuación
                 getEq [] = []
                 getEq (')':cs) = []
                 getEq ('(':cs) = []
                 getEq (':':cs) = []
                 getEq (c:cs) = c : (getEq cs)
-
+                
+                -- Descarta el nombre de una variable y obtiene el resto del string
                 getRest [] = []
                 getRest (')':cs) = ')':cs
                 getRest (',':cs) = ',':cs

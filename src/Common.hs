@@ -6,6 +6,7 @@ instance Functor Stmt where
     fmap f (Def s i) = Def s (f i)
     fmap f (Eval i)  = Eval (f i)
 
+-- Tipos de tokens en ecuaciones aritméticas
 data EqToken = Plus EqToken EqToken 
              | Minus EqToken EqToken
              | NumTimes EqToken EqToken
@@ -13,7 +14,7 @@ data EqToken = Plus EqToken EqToken
              | VarNum String 
              | Num Int deriving (Show, Eq)
 
--- Tipos de los nombres
+-- Tipos de variables
 data VarT = Generic String
           | Value String
           | Function String
@@ -23,7 +24,7 @@ data VarT = Generic String
           | List [VarT]
           | HeadTail VarT VarT
     deriving (Show, Eq)
-
+-- Tipos de expresiones
 data Exp = Fun VarT [VarT]
           | Assgn VarT [VarT] Exp
           | Var VarT
@@ -41,16 +42,14 @@ data Exp = Fun VarT [VarT]
           | Skip
     deriving (Show, Eq)
 
-data Value = Val Bool
-           | VarRes VarT
 
 -- Entornos
 type Key = (VarT, [VarT])
 type Env = [(Key, Exp)]
 
-data Error = UndefVar | InvalidOp | WrongDef deriving (Eq, Show)
+data Error = UndefVar | InvalidOp deriving (Eq, Show)
 
-
+-- generateVar: Dado un string devuelve el tipo de variable correspondiente a este.
 generateVar :: String -> VarT
 generateVar ('\'':cs) = Value (takeWhile (/= '\'') cs)
 generateVar cs = case cs of 
