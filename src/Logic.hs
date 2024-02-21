@@ -15,19 +15,6 @@ import           Data.Strict.Tuple
 import           Control.Monad                  ( liftM
                                                 , ap
                                                 )
-
-instance Ord VarT where
-    compare (Generic _) (Value _) = GT
-    compare (Generic _) (Function _) = GT
-    compare (Generic _) (ReturnValue _) = GT
-    compare (Value _) (Function _) = GT
-    compare (Value _) (ReturnValue _) = GT
-    compare (Function _) (ReturnValue _) = GT
-    compare (Generic n) (Generic n2) = compare n n2
-    compare (Value n) (Value n2) = compare n n2
-    compare (Function n) (Function n2) = compare n n2
-    compare (ReturnValue n) (ReturnValue n2) = compare n n2
-  
 -- Entorno nulo
 initEnv :: Env
 initEnv = []

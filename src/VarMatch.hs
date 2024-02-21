@@ -11,6 +11,7 @@ varMatcher xs [] = False
 varMatcher ((Value s):xs) ((Value ss):xxs) = if s == ss then varMatcher xs xxs else False
 varMatcher ((Joker _):xs) ((Value ss):xxs) = varMatcher xs xxs
 varMatcher _ _ = False
+
 genericVarMatcher :: [VarT] -> [VarT] -> Bool
 genericVarMatcher [] [] = True
 genericVarMatcher [] xs = False
@@ -58,13 +59,13 @@ compareVars var ((value, generic):xs) = if var == generic then value else compar
 compareEquationVars :: EqToken -> [(VarT, VarT)] -> EqToken
 compareEquationVars a [] = a
 compareEquationVars (VarNum s) ((Equation e, Generic g):xs) | s == g = case evalNum e of 
-                                                                                            Just ev -> (Num ev)
-                                                                                            Nothing -> (VarNum s)
+                                                                                            Just ev -> Num ev
+                                                                                            Nothing -> VarNum s
                                                                               | otherwise = compareEquationVars (VarNum s) xs
 compareEquationVars a (x:xs) = compareEquationVars a xs
 
 searchForVarsInEq :: EqToken -> [(VarT, VarT)] -> EqToken
-searchForVarsInEq (VarNum x) map = (compareEquationVars (VarNum x) map)
+searchForVarsInEq (VarNum x) map = compareEquationVars (VarNum x) map
 searchForVarsInEq (Plus a b) map = Plus (searchForVarsInEq a map) (searchForVarsInEq b map)
 searchForVarsInEq (Minus a b) map = Minus (searchForVarsInEq a map) (searchForVarsInEq b map)
 searchForVarsInEq (NumTimes a b) map = NumTimes (searchForVarsInEq a map) (searchForVarsInEq b map)
@@ -124,9 +125,9 @@ searchForMatch search envlist depth = let (match, generic) = functionMatcher sea
                                               Nothing -> case match of 
                                                           [] -> case generic of 
                                                                   [] -> Nothing
-                                                                  xs -> let (exp, vars) = (head xs)
+                                                                  xs -> let (exp, vars) = head xs
                                                                             varsPair = pairGenericVars (getVars search) vars
-                                                                            searchResultM = (replaceFunctionVars varsPair exp)
+                                                                            searchResultM = replaceFunctionVars varsPair exp
                                                                         in case searchResultM of
                                                                             Just searchResult ->  if not depth then Just searchResult
                                                                                                   else  if not (isFun searchResult) 

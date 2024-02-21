@@ -57,15 +57,3 @@ generateVar cs = case cs of
                     "true" -> ReturnValue True
                     "false" -> ReturnValue False
                     _ -> Generic cs
--- gato(tom) :- true.
-
--- padrede('Juan', 'María').
-
--- hijode(A,B) :- padrede(B,A).
--- hermanode(A,B) :- 
---    padrede(C,A) , 
---    padrede(C,B), 
---    A \== B. 
-
--- ?- hermanode('Juan', 'Marcela').
--- yes

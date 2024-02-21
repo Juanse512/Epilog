@@ -13,7 +13,7 @@ lexNum (num:s) | isDigit num = let valStr = takeWhile (isDigit) (num:s)
                                    valInt = stringToInt valStr ((length valStr) - 1)
                                in (Num valInt)
                 | otherwise = let varStr = takeWhile (isAlpha) (num:s)
-                              in (VarNum varStr)
+                              in VarNum varStr
 
 
 evalNum :: EqToken -> Maybe Int
@@ -33,4 +33,4 @@ evalNum (NumDiv a b) =   do a' <- evalNum a
                             return (a' `div` b')
 
 parseAndEval :: String -> Maybe Int
-parseAndEval str = evalNum (lexNum str)
+parseAndEval str = evalNum $ lexNum str

@@ -3,13 +3,6 @@ module PrettyPrinter where
 import           Common
 import           Text.PrettyPrint.HughesPJ
 import           Prelude                 hiding ( (<>) )
--- lista de posibles nombres para variables
--- vars :: [String]
--- vars =
---   [ c : n
---   | n <- "" : map show [(1 :: Integer) ..]
---   , c <- ['x', 'y', 'z'] ++ ['a' .. 'w']
---   ]
 
 parensIf :: Bool -> Doc -> Doc
 parensIf True  = parens
@@ -23,8 +16,6 @@ printVars (var:cs) = case var of
                           (Generic n) -> n ++ "," ++ (printVars cs)
                           (Value n) -> "'" ++ n ++ "'" ++ "," ++ (printVars cs)
 
--- printVars (Var (Generic n)):cs = n ++ "," ++ (printVars cs)
--- printVars (Var (Value n)):cs = "'" ++ n ++ "'" ++ "," ++ (printVars cs)
 ppEq :: EqToken -> Doc
 ppEq (Num i) = text $ show i
 ppEq (VarNum i) = text i
@@ -44,6 +35,8 @@ pp Skip = text "."
 pp (RTrue) = text "true"
 pp (RFalse) = text "false"
 pp (Var (Equation s)) = ppEq s
+pp (ReturnVars []) = text " "
+pp (ReturnVars (x:xs)) = text (printVars ([head x]) ++ "=" ++ printVars (tail x)) <+> text "\n" <> pp (ReturnVars xs)
 
 renderExp :: Exp -> String
 renderExp = render . pp

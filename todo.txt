@@ -1,9 +1,7 @@
 - Enteros: 
- -- Factorial no anda
  -- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (exeq.txt)
    --Capaz conviene limitar el Int,
- -- Cambiar de int a float el Num y parsearlo
-   -- Capaz no es necesario
+
 Debug:
    -- Mixear tipos de variable
 
@@ -19,6 +17,8 @@ Review:
 - Enteros: 
  -- Ver que pasa y handlear cuando hago una query generica a una funcion con ecuacion
    Tira UndefVar, puede ser correcto
+ -- Cambiar de int a float el Num y parsearlo
+   -- Capaz no es necesario
 General:
    -- Limpiar gramatica (No se si es tan necesario ahora)
 - Listas:
