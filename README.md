@@ -35,7 +35,10 @@ La estructura del proyecto es la siguiente:
 │   ├── Helpers.hs  
 │   └── Logic.hs
 ├── Ejemplos
-│   └── Prelude.lam
+│   ├── exassgn.txt
+│   ├── factorial.txt
+│   ├── fib.txt
+│   └── len.txt
 ├── README.md
 ├── Setup.hs
 ├── package.yaml

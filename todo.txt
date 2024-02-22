@@ -2,14 +2,3 @@
  -- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (exeq.txt)
    --Capaz conviene limitar el Int,
 
-Debug:
-   -- Mixear tipos de variable
-
-General:
-   -- Documentar
-   -- Comentar
-
-
-Review:
-- Listas:
-- Lexer:

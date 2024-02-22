@@ -30,6 +30,7 @@ genericVarMatcher ((List []):xs) ((HeadTail _ _):xss) = False
 genericVarMatcher ((List s):xs) ((HeadTail _ _):xss) = genericVarMatcher xs xss
 genericVarMatcher ((Joker s):xs) (x:xss) = False
 genericVarMatcher ((Value s):xs) ((Equation ss):xss) = False
+genericVarMatcher _ _ = False
 
 -- functionMatcher: Dada una key y un entorno, devuelve un par de arrays, el primero
 -- contiene los matches perfectos y las variables que contiene, y segundo
