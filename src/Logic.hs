@@ -72,6 +72,10 @@ stepComm (Assgn name vars exp) = do
     update name vars exp
     return Skip
     
+stepComm (Var (Equation e)) = case evalNum e of
+                                Just res -> return (Var (Equation (Num res))) 
+                                Nothing -> throw InvalidOp
+     
 stepComm (Var s) = return (Var s)
     
 stepComm (RTrue) = return RTrue

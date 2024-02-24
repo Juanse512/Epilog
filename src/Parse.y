@@ -66,15 +66,18 @@ Exp     :: {Exp}
         |   Exp '*' Exp                 {Times $1 $3}
         |   Exp '/' Exp                 {Div $1 $3}
         |   '{' nums '}'                {Var (Equation $2)}
+        |   VAR                         {Var (generateVar $1)}
         
 vars :: { [ VarT ] }
 vars    :   eqs                        {[$1]}
         |   lst                        {[$1]}
         |   VAR                        {[generateVar $1]}
-        |   vars ',' eqs               {$3 : $1}
-        |   vars ',' VAR               {(generateVar $3) : $1}
-        |   vars ',' VAR               {$1 ++ [(generateVar $3)]}
-        |   vars ',' lst               {$3 : $1}
+        |   eqs ',' vars               {$1 : $3}
+        |   VAR ',' vars               {(generateVar $1) : $3 }
+        |   lst ',' vars               {$1 : $3}
+        -- |   vars ',' eqs               {$3 : $1} og
+        -- |   vars ',' VAR               {(generateVar $3) : $1}
+        -- |   vars ',' lst               {$3 : $1}
 
 lst :: { VarT }
 lst     : '[' varlst ']'               {List $2}
@@ -94,7 +97,8 @@ nums    : VAR                           {lexNum $1}
 -- Nota: 
 varlst :: { [VarT] }
         : VAR                          {[generateVar $1]}
-        | varlst ',' VAR               {$1 ++ [(generateVar $3)]}
+        | VAR ',' varlst               {(generateVar $1) : $3}
+        -- | varlst ',' VAR               {$1 ++ [(generateVar $3)]}
 
 
 {

@@ -108,6 +108,8 @@ replaceGenericVars (x:xs) xss = do rest <- replaceGenericVars xs xss
 replaceFunctionVars :: [(VarT, VarT)] -> Exp -> Maybe Exp
 replaceFunctionVars vars (Fun name fvars) = do fvars <- (replaceGenericVars fvars vars)
                                                return (Fun name fvars)
+replaceFunctionVars vars (Var (Generic a)) = do fvars <- (replaceGenericVars [Generic a] vars)
+                                                return (Var (head fvars))
 replaceFunctionVars vars (Var (Equation s)) = do let eqT = searchForVarsInEq s vars
                                                  evalEq <- evalNum eqT
                                                  return (Var (Equation (Num evalEq)))
