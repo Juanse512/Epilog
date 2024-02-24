@@ -36,7 +36,9 @@ pp (RTrue) = text "true"
 pp (RFalse) = text "false"
 pp (Var (Equation s)) = ppEq s
 pp (ReturnVars []) = text " "
-pp (ReturnVars (x:xs)) = text (printVars ([head x]) ++ "=" ++ printVars (tail x)) <+> text "\n" <> pp (ReturnVars xs)
+pp (ReturnVars (x:xs)) = case head x of
+                            Value _ -> pp (ReturnVars xs)
+                            _ -> text (printVars ([head x]) ++ "=" ++ printVars (tail x)) <+> text "\n" <> pp (ReturnVars xs)
 
 renderExp :: Exp -> String
 renderExp = render . pp

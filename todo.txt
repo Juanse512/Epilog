@@ -1,4 +1,3 @@
-- Enteros: 
- -- Arreglar loop infinito si busco funcion(valor, ecuacion) con valor erroneo (exeq.txt)
-   --Capaz conviene limitar el Int,
-
+lexer: 
+  -- Arreglar fun(A, B) := A == B. no lee el .
+  

@@ -1,0 +1,4 @@
+isEq(A,B) := A == B .
+pertenece(A, []) := false.
+pertenece(A, x:xs) :=  isEq(A, x) | pertenece(A, xs).
+pertenece('c', ['a', 'b', 'c']).
