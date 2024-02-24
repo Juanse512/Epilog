@@ -210,6 +210,7 @@ lexer (c:cs) | isSpace c = lexer cs
                 -- Descarta el nombre de una variable y obtiene el resto del string
                 getRest [] = []
                 getRest (')':cs) = ')':cs
+                getRest ('.':cs) = '.':cs
                 getRest (',':cs) = ',':cs
                 getRest ('(':cs) = '(':cs
                 getRest (' ':cs) = ' ':cs
