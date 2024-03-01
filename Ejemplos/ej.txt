@@ -1,0 +1,8 @@
+padrede('Juan', 'María') := true. 
+padrede('Pablo', 'Juan') := true. 
+padrede('Pablo', 'Marcela') := true.
+padrede('Carlos', 'Débora') := true. 
+hijode(A,B) := padrede(B,A).
+abuelode(A,B) := padrede(A,C) & padrede(C,B).
+hermanode(A,B) := padrede(C,A) & padrede(C,B) & A != B.
+hermanode('Marcela', 'Juan').

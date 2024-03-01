@@ -95,14 +95,18 @@ stepComm (NEq c1 c2) = do
 stepComm (Or c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
-    res <- evalLogic c1' c2' (||)
-    if res then return RTrue else return RFalse
+    res <- evalLogic' c1' c2' (||)
+    case res of 
+      Left b -> return (boolToExp b)
+      Right v -> return (ReturnVars v)
 
 stepComm (And c1 c2) = do
     c1' <- stepComm c1
     c2' <- stepComm c2
-    res <- evalLogic c1' c2' (&&)
-    if res then return RTrue else return RFalse
+    res <- evalLogic' c1' c2' (&&)
+    case res of 
+      Left b -> return (boolToExp b)
+      Right v -> return (ReturnVars v)
 
 stepComm (Add c1 c2) = do
     c1' <- stepComm c1

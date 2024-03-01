@@ -75,12 +75,9 @@ vars    :   eqs                        {[$1]}
         |   eqs ',' vars               {$1 : $3}
         |   VAR ',' vars               {(generateVar $1) : $3 }
         |   lst ',' vars               {$1 : $3}
-        -- |   vars ',' eqs               {$3 : $1} og
-        -- |   vars ',' VAR               {(generateVar $3) : $1}
-        -- |   vars ',' lst               {$3 : $1}
 
 lst :: { VarT }
-lst     : '[' varlst ']'               {List $2}
+lst     : '[' vars ']'               {List $2}
         | '[' ']'                      {List []}
         | VAR ':' VAR                  {HeadTail (Generic $1) (Generic $3)}
 
@@ -93,13 +90,6 @@ nums    : VAR                           {lexNum $1}
         | nums '-' nums                 {Minus $1 $3}
         | nums '*' nums                 {NumTimes $1 $3}
         | nums '/' nums                 {NumDiv $1 $3}
-
--- Nota: 
-varlst :: { [VarT] }
-        : VAR                          {[generateVar $1]}
-        | VAR ',' varlst               {(generateVar $1) : $3}
-        -- | varlst ',' VAR               {$1 ++ [(generateVar $3)]}
-
 
 {
 data P a = Ok a | Failed String
