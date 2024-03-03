@@ -1,0 +1,4 @@
+fun('b', 'c') := true.
+fun('d', 'e') := true.
+fun('x', 'y') := true.
+fun(A, B).
